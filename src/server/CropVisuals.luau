@@ -2,6 +2,7 @@
 local CropVisuals = {}
 
 function CropVisuals.render(view, plot, config, world, now)
+	view.soil:SetAttribute("GrowthStage", plot.stage)
 	view.crop:RemoveTag("CosmicCrop")
 	view.crop:ClearAllChildren()
 	view.label.Parent.StudsOffset = Vector3.new(0, 1.3, 0)

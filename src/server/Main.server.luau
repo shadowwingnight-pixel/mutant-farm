@@ -8,8 +8,11 @@ local farms = Instance.new("Folder")
 farms.Name, farms.Parent = "MutantFarms", workspace
 local sessions, slots = {}, {}
 local random = Random.new()
+-- Outbound cosmetic events only. No OnServerEvent listener or economic input.
+local feedback = Instance.new("RemoteEvent")
+feedback.Name, feedback.Parent = "FarmFeedback", ReplicatedStorage
 
-local function publish(player, session, message)
+local function publish(player, session, message, effect)
 	local count, value = session.state:bagSummary()
 	player:SetAttribute("Coins", session.state.coins)
 	player:SetAttribute("TomatoSeeds", session.state.seeds.Tomato)
@@ -28,6 +31,9 @@ local function publish(player, session, message)
 	if message then
 		player:SetAttribute("FarmMessage", message)
 		player:SetAttribute("FarmMessageId", (player:GetAttribute("FarmMessageId") or 0) + 1)
+		local payload = effect or { kind = "Notice" }
+		payload.text = message
+		feedback:FireClient(player, payload)
 	end
 end
 
@@ -69,13 +75,15 @@ local function join(player)
 	publish(player, session, "Welcome! Buy a Tomato Seed at the green shop.")
 	prompt(world.shop, "Buy seed • " .. Config.Crops.Tomato.SeedPrice .. " Coins", function(visitor)
 		if not allowed(visitor, player, world.shop, Config.ShopDistance) then return end
-		local _, message = state:buy("Tomato")
-		publish(player, session, message)
+		local ok, message = state:buy("Tomato")
+		publish(player, session, ok and "+1 Tomato Seed" or message, ok and { kind = "Buy", position = world.shop.Position } or nil)
 	end)
 	prompt(world.sell, "Sell all Tomatoes", function(visitor)
 		if not allowed(visitor, player, world.sell, Config.ShopDistance) then return end
-		local _, message = state:sell()
-		publish(player, session, message)
+		local before = state.coins
+		local ok, message = state:sell()
+		local earned = state.coins - before
+		publish(player, session, ok and ("+" .. earned .. " Coins • Harvest sold!") or message, ok and { kind = "Sell", position = world.sell.Position, amount = earned } or nil)
 	end)
 	for index, view in ipairs(world.plots) do
 		local click = Instance.new("ClickDetector")
@@ -84,13 +92,16 @@ local function join(player)
 		click.MouseClick:Connect(function(visitor)
 			if not allowed(visitor, player, view.soil, Config.InteractionDistance) then return end
 			local ok, message
+			local action = state.plots[index].stage == 0 and "Plant" or "Harvest"
+			local mutation = state.plots[index].mutation
 			if state.plots[index].stage == 0 then
 				ok, message = state:plant(index, "Tomato", os.clock())
 			else
 				ok, message = state:harvest(index)
 			end
 			if ok then World.render(view, state.plots[index], Config) end
-			publish(player, session, message)
+			if ok then message = action == "Plant" and "Seed planted • Watch it grow!" or ("+1 " .. mutation .. " Tomato") end
+			publish(player, session, message, ok and { kind = action, position = view.soil.Position, mutation = mutation } or nil)
 		end)
 	end
 	local function spawn(character)
@@ -114,6 +125,8 @@ end)
 Players.PlayerAdded:Connect(join)
 for _, player in ipairs(Players:GetPlayers()) do join(player) end
 
+require(script.Parent.StudioPreview).install(Config, World, feedback, sessions)
+
 while true do
 	task.wait(0.25)
 	local now = os.clock()
@@ -121,7 +134,10 @@ while true do
 		for _, index in ipairs(session.state:advance(now, function(low, high) return random:NextInteger(low, high) end)) do
 			local plot = session.state.plots[index]
 			World.render(session.world.plots[index], plot, Config)
-			if plot.stage == 4 then publish(player, session, plot.mutation .. " Tomato is READY! Click its soil to harvest.") end
+			if plot.stage == 4 then
+				local message = plot.mutation == "Normal" and "TOMATO READY!" or (string.upper(plot.mutation) .. " MUTATION!")
+				publish(player, session, message, { kind = "Ready", mutation = plot.mutation, position = session.world.plots[index].soil.Position })
+			end
 		end
 		for index, plot in ipairs(session.state.plots) do
 			World.countdown(session.world.plots[index], plot, Config, now)

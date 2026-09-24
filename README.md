@@ -2,8 +2,8 @@
 
 Milestone 1 prototype: buy Tomato Seeds, plant, grow, mutate, harvest and sell.
 **Milestone 1 validated:** the project owner confirmed the required manual
-gameplay loop passed in Roblox Studio on 2026-09-25. Milestone 2 has not started.
-All progress is session-only (no persistence).
+gameplay loop passed in Roblox Studio on 2026-09-25.
+All progress is session-only (no persistence). Milestone 2 presentation improvements are implemented and awaiting manual Studio validation; see [Milestone 2 testing](docs/MILESTONE2.md). Milestone 3 has not started.
 
 ## Source layout
 
@@ -97,8 +97,8 @@ are replicated display snapshots, never input. Native clicks/prompts validate
 ownership, a living character, distance and a shared action cooldown server-side.
 There are no client-to-server inventory or pricing remotes.
 
-`FarmState` contains testable state/economy logic; `FarmWorld` generates primitives;
-`Main` handles player lifecycle and interactions; `FarmHUD` displays replicated
+`FarmState` contains testable state/economy logic; `FarmWorld` generates the farm; `CropVisuals` renders plants;
+`Main` handles player lifecycle and interactions; `FarmEffects` provides bounded local effects; `FarmHUD` displays replicated
 state and animates Cosmic stars. No external assets or runtime packages are used.
 
 ## Validation and manual acceptance
@@ -139,24 +139,4 @@ six plots, harvest/replant, and reset your character. In Studio's two-player tes
 verify separate inventories and that another player's plots/shop/sell stand do
 not accept your interactions. Try Device Emulator for tap targets and HUD sizing.
 
-Rare appearance preview, without changing probabilities: during Play, switch the
-Studio Command Bar to **Server** and run the following. This creates isolated
-visual previews only; it does not roll crops or grant inventory/rewards. Stop Play
-to discard them. Replace `"Cosmic"` with `"Golden"`, `"Giant"` or `"Crystal"`.
-
-```lua
-local W = require(game.ServerScriptService.Server.FarmWorld)
-local C = require(game.ReplicatedStorage.Shared.Config)
-local p = game.Players:GetPlayers()[1]
-local farm = workspace.MutantFarms:FindFirstChild("Farm_" .. p.UserId)
-local soil = farm:FindFirstChild("Soil_1")
-local preview = Instance.new("Model", workspace)
-preview.Name = "MutationPreview"
-local base = W.part(preview, "Base", Vector3.new(8, 0.5, 8), soil.Position + Vector3.new(0, 0, 9), Color3.fromRGB(83, 53, 40))
-local crop = Instance.new("Model", preview)
-W.render({soil = base, label = W.label(base, "Preview", 2), crop = crop}, {stage = 4, cropId = "Tomato", mutation = "Cosmic"}, C)
-```
-
-Cosmic should show a violet fruit, glowing shards, sparkling highlights, and a
-moving cyan/gold star ring. These additional checks remain available for further
-coverage; the required Milestone 1 gameplay loop is validated. Milestone 2 has not started.
+Rare-mutation previews now use a Studio-only server command with the same reveal effects as gameplay. See [exact preview and recording instructions](docs/MILESTONE2.md#mutation-previews-and-cosmic-recording). Production probabilities remain unchanged.
