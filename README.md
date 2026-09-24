@@ -1,8 +1,9 @@
 # Mutant Farm
 
 Milestone 1 prototype: buy Tomato Seeds, plant, grow, mutate, harvest and sell.
-Implementation is ready for Studio testing; milestone acceptance requires the
-manual loop below to pass. All progress is session-only (no persistence).
+**Milestone 1 validated:** the project owner confirmed the required manual
+gameplay loop passed in Roblox Studio on 2026-09-25. Milestone 2 has not started.
+All progress is session-only (no persistence).
 
 ## Source layout
 
@@ -102,6 +103,14 @@ state and animates Cosmic stars. No external assets or runtime packages are used
 
 ## Validation and manual acceptance
 
+Status recorded on 2026-09-25:
+
+- Required manual gameplay loop: **PASS**, confirmed by the project owner in
+  Roblox Studio (buy Tomato Seed → plant → grow → harvest → sell).
+- Rojo build and generated-script layout checks: **PASS** at the implementation checkpoint.
+- Standalone Luau compilation/state tests: written but not run; test-tool download was not approved.
+- Additional multiplayer, mobile and rare-mutation visual checks below are not yet confirmed.
+
 Run `./tests/validate.ps1` for the build and generated-script layout check.
 With the official standalone Luau tools already available, run:
 
@@ -149,5 +158,5 @@ W.render({soil = base, label = W.label(base, "Preview", 2), crop = crop}, {stage
 ```
 
 Cosmic should show a violet fruit, glowing shards, sparkling highlights, and a
-moving cyan/gold star ring. Manual engine/UI checks remain required before
-Milestone 1 is declared complete. Milestone 2 has not started.
+moving cyan/gold star ring. These additional checks remain available for further
+coverage; the required Milestone 1 gameplay loop is validated. Milestone 2 has not started.
