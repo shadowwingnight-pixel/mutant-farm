@@ -39,7 +39,8 @@ local function allowed(player, owner, target, distance)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not root or not humanoid or humanoid.Health <= 0 then return false end
-	if (root.Position - target.Position).Magnitude > distance then return false end
+	-- The positive comparison also rejects non-finite/NaN positions.
+	if not ((root.Position - target.Position).Magnitude <= distance) then return false end
 	local now = os.clock()
 	if now - session.lastAction < Config.ActionCooldown then return false end
 	session.lastAction = now
