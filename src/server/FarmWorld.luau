@@ -8,6 +8,7 @@ function World.part(parent, name, size, position, color, material)
 	part.Anchored = true
 	part.Color = color
 	part.Material = material or Enum.Material.SmoothPlastic
+	part.CanTouch = false
 	part.TopSurface, part.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
 	part.Parent = parent
 	return part
@@ -16,10 +17,10 @@ end
 function World.label(part, text, offset, width, height)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.fromOffset(width or 180, height or 54)
+	gui.Size = UDim2.fromOffset(width or 166, height or 42)
 	gui.StudsOffset = Vector3.new(0, offset or 3, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 70
+	gui.MaxDistance = 48
 	gui.Parent = part
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
@@ -27,7 +28,7 @@ function World.label(part, text, offset, width, height)
 	label.BackgroundTransparency = 0.12
 	label.TextColor3 = cream
 	label.Font = Enum.Font.GothamBold
-	label.TextSize = 15
+	label.TextSize = 14
 	label.TextWrapped = true
 	label.Text = text
 	label.Parent = gui
@@ -37,13 +38,38 @@ function World.label(part, text, offset, width, height)
 	return label
 end
 
+local function decoration(parent, name, size, position, color, material, shape)
+	local part = World.part(parent, name, size, position, color, material)
+	part.CanCollide, part.CanQuery, part.CastShadow = false, false, false
+	if shape then part.Shape = shape end
+	return part
+end
+
 local function kiosk(parent, position, name, color, text)
-	local stand = World.part(parent, name, Vector3.new(9, 3, 6), position + Vector3.new(0, 1.5, 0), color)
-	World.part(parent, "Canopy", Vector3.new(11, 0.6, 8), position + Vector3.new(0, 6, 0), color)
+	local stand = World.part(parent, name, Vector3.new(9, 2.5, 5), position + Vector3.new(0, 1.25, 0), Color3.fromRGB(148, 108, 69), Enum.Material.WoodPlanks)
+	World.part(parent, "Counter", Vector3.new(9.6, 0.35, 5.6), position + Vector3.new(0, 2.7, 0), cream, Enum.Material.Wood)
+	for stripe = 0, 6 do
+		World.part(parent, "AwningStripe", Vector3.new(1.55, 0.4, 7), position + Vector3.new(-4.65 + stripe * 1.55, 6, 0), stripe % 2 == 0 and color or cream)
+	end
 	for _, x in ipairs({ -4, 4 }) do
 		World.part(parent, "Post", Vector3.new(0.35, 6, 0.35), position + Vector3.new(x, 3, 2.5), cream, Enum.Material.Wood)
 	end
-	World.label(stand, text, 6, 190, 60)
+	World.label(stand, text, 6.4, 190, 60)
+	if name == "SeedShop" then
+		for index = 1, 3 do
+			local packet = decoration(parent, "SeedPacket", Vector3.new(1.2, 1.7, 0.2), position + Vector3.new((index - 2) * 2, 3.7, 0), cream)
+			decoration(parent, "TomatoEmblem", Vector3.new(0.65, 0.65, 0.18), packet.Position + Vector3.new(0, 0, 0.2), Color3.fromRGB(233, 82, 65), nil, Enum.PartType.Ball)
+		end
+	else
+		decoration(parent, "HarvestCrate", Vector3.new(4, 0.8, 2.6), position + Vector3.new(-1, 3.25, 0), Color3.fromRGB(111, 73, 42), Enum.Material.WoodPlanks)
+		for index = 1, 3 do
+			decoration(parent, "MarketTomato", Vector3.new(0.9, 0.9, 0.9), position + Vector3.new(index - 3, 3.9, 0), Color3.fromRGB(233, 82, 65), nil, Enum.PartType.Ball)
+		end
+		for index = 1, 3 do
+			local coin = decoration(parent, "CoinStack", Vector3.new(0.18, 1, 1), position + Vector3.new(2.5, 2.9 + index * 0.19, 0), Color3.fromRGB(255, 200, 67), Enum.Material.Metal, Enum.PartType.Cylinder)
+			coin.CFrame *= CFrame.Angles(0, 0, math.pi / 2)
+		end
+	end
 	return stand
 end
 
@@ -53,25 +79,50 @@ function World.create(parent, player, slot, config)
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model.Parent = parent
 	local origin = Vector3.new(((slot - 1) % 4) * 80, 4, math.floor((slot - 1) / 4) * 80)
-	World.part(model, "Meadow", Vector3.new(64, 2, 64), origin, green, Enum.Material.Grass)
+	World.part(model, "Meadow", Vector3.new(76, 2, 76), origin, green, Enum.Material.Grass)
 	World.part(model, "Path", Vector3.new(54, 0.15, 11), origin + Vector3.new(0, 1.1, 14), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
+	World.part(model, "GardenPath", Vector3.new(6, 0.12, 43), origin + Vector3.new(0, 1.1, 0), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
+	World.part(model, "CrossPath", Vector3.new(48, 0.12, 3), origin + Vector3.new(0, 1.1, -11.5), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
+	for index = 1, 4 do
+		decoration(model, "SteppingStone", Vector3.new(3.8, 0.18, 2), origin + Vector3.new(0, 1.15, 21 + index * 2.5), Color3.fromRGB(185, 183, 157), Enum.Material.Slate)
+	end
 	local sign = World.part(model, "FarmSign", Vector3.new(14, 2, 0.5), origin + Vector3.new(0, 5, -30), Color3.fromRGB(31, 70, 57))
 	World.label(sign, "MUTANT FARM\n" .. player.DisplayName .. "'s garden", 2, 240, 58)
 	for _, x in ipairs({ -31, 31 }) do
-		World.part(model, "Fence", Vector3.new(0.5, 2, 62), origin + Vector3.new(x, 2, 0), cream, Enum.Material.Wood)
+		for _, height in ipairs({ 2, 3.2 }) do
+			World.part(model, "FenceRail", Vector3.new(0.3, 0.25, 62), origin + Vector3.new(x, height, 0), cream, Enum.Material.Wood)
+		end
+		for z = -30, 30, 10 do World.part(model, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x, 2.5, z), cream, Enum.Material.Wood) end
 	end
 	for _, z in ipairs({ -31, 31 }) do
-		World.part(model, "Fence", Vector3.new(62, 2, 0.5), origin + Vector3.new(0, 2, z), cream, Enum.Material.Wood)
+		for _, x in ipairs({ -18, 18 }) do
+			for _, height in ipairs({ 2, 3.2 }) do World.part(model, "FenceRail", Vector3.new(26, 0.25, 0.3), origin + Vector3.new(x, height, z), cream, Enum.Material.Wood) end
+			for _, dx in ipairs({ -13, 0, 13 }) do World.part(model, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x + dx, 2.5, z), cream, Enum.Material.Wood) end
+		end
 	end
-	local shop = kiosk(model, origin + Vector3.new(-21, 1, 17), "SeedShop", Color3.fromRGB(49, 136, 94), "SEED SHOP\nTomato Seed • " .. config.Crops.Tomato.SeedPrice .. " Coins")
-	local sell = kiosk(model, origin + Vector3.new(21, 1, 17), "SellStand", Color3.fromRGB(220, 143, 58), "SELL HARVEST\nTomatoes → Coins")
+	for _, x in ipairs({ -34, 34 }) do
+		World.part(model, "TreeTrunk", Vector3.new(1.4, 6, 1.4), origin + Vector3.new(x, 4, -25), Color3.fromRGB(121, 88, 61), Enum.Material.Wood)
+		decoration(model, "TreeCrown", Vector3.new(7, 7, 7), origin + Vector3.new(x, 8, -25), Color3.fromRGB(60, 127, 80), Enum.Material.Grass, Enum.PartType.Ball)
+		for index = 1, 3 do
+			decoration(model, "FlowerPatch", Vector3.new(1.2, 0.35, 1.2), origin + Vector3.new(x, 1.3, index * 4), index % 2 == 0 and Color3.fromRGB(255, 202, 107) or Color3.fromRGB(195, 164, 228), nil, Enum.PartType.Ball)
+		end
+	end
+	decoration(model, "HayBale", Vector3.new(4, 2.5, 3), origin + Vector3.new(-25, 2.25, -25), Color3.fromRGB(217, 180, 91), Enum.Material.Grass)
+	decoration(model, "WaterBarrel", Vector3.new(3, 3, 3), origin + Vector3.new(25, 2.5, -25), Color3.fromRGB(90, 126, 138), Enum.Material.WoodPlanks)
+	local shop = kiosk(model, origin + Vector3.new(-21, 1, 17), "SeedShop", Color3.fromRGB(49, 136, 94), "1  SEED SHOP\nTomato Seed • " .. config.Crops.Tomato.SeedPrice .. " Coins")
+	local sell = kiosk(model, origin + Vector3.new(21, 1, 17), "SellStand", Color3.fromRGB(220, 143, 58), "4  SELL HARVEST\nTomatoes → Coins")
+	local gardenSign = decoration(model, "GardenGuide", Vector3.new(0.3, 2, 0.3), origin + Vector3.new(0, 2, 5), cream, Enum.Material.Wood)
+	World.label(gardenSign, "2  PLANT  →  3  HARVEST\nClick / tap the soil", 2, 220, 48)
 	local plots = {}
 	for index = 1, config.PlotCount do
 		local position = origin + Vector3.new(((index - 1) % 3 - 1) * 13, 1.3, -5 - math.floor((index - 1) / 3) * 13)
-		World.part(model, "PlotBorder", Vector3.new(11, 0.5, 10), position, cream, Enum.Material.Wood)
+		World.part(model, "PlotBorder", Vector3.new(11, 0.5, 10), position, Color3.fromRGB(159, 119, 78), Enum.Material.WoodPlanks)
 		local soil = World.part(model, "Soil_" .. index, Vector3.new(10, 0.6, 9), position + Vector3.new(0, 0.1, 0), Color3.fromRGB(83, 53, 40), Enum.Material.Ground)
 		soil:SetAttribute("OwnerUserId", player.UserId)
-		local label = World.label(soil, "PLANT TOMATO\nClick / tap soil", 1.6)
+		for row = -3, 3, 2 do
+			decoration(model, "SoilFurrow", Vector3.new(9, 0.08, 0.14), soil.Position + Vector3.new(0, 0.32, row), Color3.fromRGB(111, 72, 48), Enum.Material.Ground)
+		end
+		local label = World.label(soil, "PLANT • Click / tap", 1.3)
 		local crop = Instance.new("Model")
 		crop.Name, crop.Parent = "Crop", model
 		plots[index] = { soil = soil, label = label, crop = crop }
@@ -80,77 +131,14 @@ function World.create(parent, player, slot, config)
 end
 
 function World.render(view, plot, config)
-	view.crop:ClearAllChildren()
-	view.crop:RemoveTag("CosmicCrop")
-	view.label.Parent.StudsOffset = Vector3.new(0, 1.6, 0)
-	if plot.stage == 0 then
-		view.label.Text = "PLANT TOMATO\nClick / tap soil"
-		view.label.TextColor3 = cream
-		return
-	end
-	local mutation = config.Mutations[1]
-	for _, candidate in ipairs(config.Mutations) do
-		if candidate.Id == plot.mutation then mutation = candidate; break end
-	end
-	local mature = plot.stage == 4
-	local scale = mature and mutation.Scale or 1
-	local color = Color3.fromRGB(table.unpack(mutation.Color))
-	local base = view.soil.Position + Vector3.new(0, 0.4, 0)
-	local height = ({ 0.9, 1.8, 2.8, 3.5 })[plot.stage]
-	height *= scale
-	local stem = World.part(view.crop, "Stem", Vector3.new(0.3, height, 0.3), base + Vector3.new(0, height / 2, 0), Color3.fromRGB(51, 125, 60))
-	stem.CanCollide, stem.CanQuery = false, false
-	for _, direction in ipairs({ -1, 1 }) do
-		local leaf = World.part(view.crop, "Leaf", Vector3.new(height * 0.7, 0.18, height * 0.35), base + Vector3.new(direction * height * 0.25, height * 0.6, 0), green)
-		leaf.CFrame *= CFrame.Angles(0, 0, direction * math.rad(22))
-		leaf.CanCollide, leaf.CanQuery = false, false
-	end
-	if plot.stage >= 3 then
-		local fruit = World.part(view.crop, "Tomato", Vector3.new(2, 2, 2) * scale, base + Vector3.new(0, height, 0), mature and color or Color3.fromRGB(125, 191, 69))
-		fruit.Shape = Enum.PartType.Ball
-		fruit.CanCollide, fruit.CanQuery = false, false
-		local crown = World.part(view.crop, "Calyx", Vector3.new(1.2, 0.16, 1.2) * scale, fruit.Position + Vector3.new(0, scale, 0), Color3.fromRGB(46, 125, 61))
-		crown.CFrame *= CFrame.Angles(0, math.rad(45), 0)
-		crown.CanCollide, crown.CanQuery = false, false
-		if mature and mutation.Id == "Golden" then fruit.Material = Enum.Material.Metal end
-		if mature and (mutation.Id == "Crystal" or mutation.Id == "Cosmic") then
-			fruit.Material = Enum.Material.Neon
-			for i = 1, 5 do
-				local angle = i * math.pi * 2 / 5
-				local shard = World.part(view.crop, "CrystalShard", Vector3.new(0.5, 1.6, 0.5) * scale, fruit.Position + Vector3.new(math.cos(angle) * scale, 0.4, math.sin(angle) * scale), color, Enum.Material.Neon)
-				shard.CFrame *= CFrame.Angles(math.rad(25), angle, math.rad(25))
-				shard.CanCollide, shard.CanQuery = false, false
-			end
-			local light = Instance.new("PointLight")
-			light.Color, light.Brightness, light.Range = color, 1.5, 12
-			light.Parent = fruit
-		end
-		if mature and mutation.Id == "Cosmic" then
-			fruit.Color = Color3.fromRGB(64, 24, 123)
-			for i = 1, 12 do
-				local angle = i * math.pi / 6
-				local star = World.part(view.crop, "OrbitStar", Vector3.new(0.28, 0.28, 0.28), fruit.Position + Vector3.new(math.cos(angle) * 2.5, math.sin(angle) * 0.7, math.sin(angle) * 2.5), i % 2 == 0 and Color3.fromRGB(107, 255, 234) or Color3.fromRGB(255, 212, 111), Enum.Material.Neon)
-				star.Shape = Enum.PartType.Ball
-				star.CanCollide, star.CanQuery = false, false
-			end
-			local sparkles = Instance.new("Sparkles")
-			sparkles.SparkleColor, sparkles.Parent = color, fruit
-			local highlight = Instance.new("Highlight")
-			highlight.FillColor, highlight.OutlineColor = color, Color3.fromRGB(128, 255, 240)
-			highlight.FillTransparency = 0.7
-			highlight.Adornee, highlight.Parent = view.crop, view.crop
-			view.crop:AddTag("CosmicCrop")
-		end
-	end
-	view.label.Text = mature and ("READY • Click / tap\n" .. mutation.Id .. " " .. plot.cropId) or ({ "SPROUT", "GROWING", "RIPENING" })[plot.stage]
-	view.label.TextColor3 = mature and color or cream
-	view.label.Parent.StudsOffset = Vector3.new(0, mature and (height + 2.2) or 1.6, 0)
+	require(script.Parent.CropVisuals).render(view, plot, config, World, os.clock())
 end
 
 function World.countdown(view, plot, config, now)
 	if plot.stage == 0 or plot.stage == 4 then return end
+	if view.visualPhase == "SEED" and now - plot.plantedAt >= 1.3 then World.render(view, plot, config) end
 	local seconds = math.max(0, math.ceil(config.Crops[plot.cropId].GrowSeconds - (now - plot.plantedAt)))
-	local text = ({ "SPROUT", "GROWING", "RIPENING" })[plot.stage] .. " • " .. seconds .. "s\nMutation at maturity"
+	local text = (view.visualPhase or "GROWING") .. " • " .. seconds .. "s"
 	if view.label.Text ~= text then view.label.Text = text end
 end
 
