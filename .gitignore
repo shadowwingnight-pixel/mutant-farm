@@ -1,0 +1,19 @@
+# Generated Roblox places and build output
+*.rbxl
+*.rbxlx
+/build/
+/sourcemap.json
+
+# Local editor and OS files
+/.idea/
+/.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local secrets
+.env
+.env.*
+!.env.example
