@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local FarmState = require(script.Parent.FarmState)
+local Objectives = require(script.Parent.Objectives)
+local TownNPCs = require(script.Parent.TownNPCs)
 local World = require(script.Parent.FarmWorld)
 local Persistence = require(script.Parent.Persistence)
 local persistence = Persistence.new(Config)
@@ -23,6 +25,7 @@ actionRequest.Name, actionRequest.Parent = "FarmAction", ReplicatedStorage
 local function publish(player, session, message, effect)
 	local count, value = session.state:bagSummary()
 	player:SetAttribute("Coins", session.state.coins)
+	player:SetAttribute("ObjectiveStep", session.state.objectiveStep)
 	player:SetAttribute("PlotCount", #session.state.plots)
 	player:SetAttribute("ExpansionTier", session.state.expansionTier)
 	player:SetAttribute("HarvestCount", count)
@@ -78,6 +81,22 @@ local function allowed(player, owner, target, distance)
 end
 
 local bindPlots
+local function objectiveEvent(player, session, event)
+	local completed = Objectives.advance(session.state, event)
+	if #completed > 0 then
+		session.nextSave = math.min(session.nextSave, os.clock() + 3)
+		for _, text in ipairs(completed) do feedback:FireClient(player, { kind = "Objective", text = text }) end
+	end
+end
+TownNPCs.build(town, function(player, definition, target)
+	if not allowed(player, player, target, 11) then return end
+	local session = sessions[player]
+	if session.lastTalk and os.clock() - session.lastTalk < 1 then return end
+	session.lastTalk = os.clock()
+	if definition.Id == "Researcher" then objectiveEvent(player, session, "Researcher") end
+	publish(player, session)
+	feedback:FireClient(player, TownNPCs.dialogue(definition, session.state, environment.state:snapshot()))
+end)
 -- Only identifiers are accepted. Prices, selected seed, unlocks and rewards stay server-owned.
 actionRequest.OnServerEvent:Connect(function(player, action, cropId)
 	if action == "Expand" then
@@ -105,6 +124,7 @@ actionRequest.OnServerEvent:Connect(function(player, action, cropId)
 	local ok, message
 	if action == "Buy" then ok, message = session.state:buy(cropId) else ok, message = session.state:select(cropId) end
 	if ok and action == "Buy" then message = "+1 " .. cropId .. " Seed • Selected for planting" end
+	if ok and action == "Buy" and cropId == "Tomato" then objectiveEvent(player, session, "BuyTomato") end
 	publish(player, session, message, ok and { kind = action, position = target.Position, cropId = cropId } or nil)
 end)
 
@@ -126,6 +146,7 @@ local function sellHarvest(player, session, stand)
 	local earned = state.coins - before
 	if ok then
 		message = "+" .. earned .. " Coins • Harvest sold!"
+		objectiveEvent(player, session, "Sell")
 		if #unlocks > 0 then message ..= "\nUNLOCKED: " .. table.concat(unlocks, ", ") .. "!" end
 	end
 	publish(player, session, message, ok and { kind = "Sell", position = stand.Position, amount = earned, unlocks = unlocks } or nil)
@@ -206,7 +227,10 @@ bindPlots = function(player, session)
 			else
 				ok, message, newDiscovery = state:harvest(index)
 			end
-			if ok then World.render(view, state.plots[index], Config) end
+			if ok then
+				World.render(view, state.plots[index], Config)
+				objectiveEvent(player, session, action)
+			end
 			if ok then
 				message = action == "Plant" and (cropId .. " planted • Watch it grow!") or ("+1 " .. mutation .. " " .. cropId)
 				if newDiscovery then message = "NEW DISCOVERY!\n+1 " .. mutation .. " " .. cropId end

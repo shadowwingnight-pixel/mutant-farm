@@ -4,7 +4,7 @@ FarmState.__index = FarmState
 
 function FarmState.new(config)
 	local self = setmetatable({ config = config, coins = config.StartingCoins, seeds = {}, bag = {}, plots = {},
-		earnedCoins = 0, harvested = {}, unlocked = {}, discoveries = {}, selectedCrop = config.CropOrder[1], expansionTier = 1 }, FarmState)
+		earnedCoins = 0, harvested = {}, unlocked = {}, discoveries = {}, selectedCrop = config.CropOrder[1], expansionTier = 1, objectiveStep = 0 }, FarmState)
 	for cropId in pairs(config.Crops) do
 		self.seeds[cropId] = 0
 		self.bag[cropId] = {}
@@ -21,7 +21,7 @@ end
 -- Data passed here has already been decoded/validated by PlayerData.
 function FarmState.fromData(config, data)
 	local self = FarmState.new(config)
-	for _, field in ipairs({ "coins", "seeds", "bag", "earnedCoins", "harvested", "unlocked", "discoveries", "selectedCrop", "expansionTier" }) do
+	for _, field in ipairs({ "coins", "seeds", "bag", "earnedCoins", "harvested", "unlocked", "discoveries", "selectedCrop", "expansionTier", "objectiveStep" }) do
 		self[field] = data[field]
 	end
 	self:refreshUnlocks()

@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 19) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 22) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, nineteen modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, twenty-two modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -107,6 +107,15 @@ try {
         throw 'Validated soil target geometry or expansion presentation hook changed.'
     }
     Write-Output 'PASS static redesign boundaries and preserved soil geometry.'
+    foreach ($name in @('Objectives', 'TownNPCs')) {
+        if ($serverModules -notcontains $name -or $clientModules -contains $name) { throw "Server-only module missing: $name" }
+    }
+    $npcSource = Get-Content -Raw src/server/TownNPCs.luau
+    if ($npcSource -match 'OnServerEvent|Heartbeat|RenderStepped|PathfindingService' -or
+        -not $mainSource.Contains('allowed(player, player, target, 11)') -or
+        -not $mainSource.Contains('TownNPCs.dialogue(definition, session.state, environment.state:snapshot())') -or
+        $clientModules -notcontains 'TownDialogue') { throw 'NPC authority/UI boundary missing.' }
+    Write-Output 'PASS static NPC authority and dialogue placement (not runtime validation).'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
@@ -120,6 +129,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Persistence tests failed.' }
         & $runner tests/Environment.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Environment tests failed.' }
+        & $runner tests/Objectives.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Objective tests failed.' }
     } else {
         Write-Output 'SKIP Luau compilation/state tests: pass -LuauDirectory with official standalone tools.'
     }

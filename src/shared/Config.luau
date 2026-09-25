@@ -1,6 +1,14 @@
 -- Numbers and identifiers only: also usable by the standalone Luau tests.
 return {
 	StartingCoins = 100,
+	Objectives = {
+		{ Event = "BuyTomato", Text = "Buy a Tomato Seed", Coins = 5 },
+		{ Event = "Plant", Text = "Plant a crop", Coins = 5 },
+		{ Event = "Harvest", Text = "Harvest a crop", Coins = 5 },
+		{ Event = "Sell", Text = "Sell your harvest", Coins = 5 },
+		{ Event = "Discover", Text = "Record a mutation in Book", Coins = 5 },
+		{ Event = "Researcher", Text = "Visit the Researcher • north of Town Square", Coins = 5 },
+	},
 	PlotCount = 6,
 	Expansions = {
 		{ Name = "Starter Farm", Plots = 6, Cost = 0 },

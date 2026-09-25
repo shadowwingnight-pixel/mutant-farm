@@ -10,6 +10,8 @@ gui.Name, gui.ResetOnSpawn = "MutantFarmHUD", false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 local panels = FarmPanels.create(gui, player, Config, ReplicatedStorage:WaitForChild("FarmAction"))
+local dialogue = require(script.Parent.TownDialogue).create(gui, panels.close)
+player.CharacterAdded:Connect(function() dialogue.close() end)
 local cream = Color3.fromRGB(255, 243, 214)
 local dark = Color3.fromRGB(24, 45, 38)
 
@@ -43,7 +45,7 @@ for index, info in ipairs({ { "Seeds", panels.openSeeds }, { "Book", panels.open
 	button.Text, button.Font, button.TextSize = info[1], Enum.Font.GothamBold, 13
 	button.TextColor3, button.BackgroundColor3, button.Parent = cream, Color3.fromRGB(60, 106, 74), panel
 	round(button, 7)
-	button.Activated:Connect(info[2])
+	button.Activated:Connect(function() dialogue.close(); info[2]() end)
 end
 local cards = {}
 for index, info in ipairs({ {"Coins", "Coins", Color3.fromRGB(255, 212, 95)}, {"SeedCount", "Seeds", Color3.fromRGB(167, 232, 136)}, {"HarvestCount", "Harvest", Color3.fromRGB(255, 146, 124)} }) do
@@ -109,9 +111,9 @@ local toastVersion = 0
 local toastLocked = false
 local importantQueue = {}
 local function showToast(payload)
-	local important = payload.kind == "Expand" or payload.discovery or (payload.unlocks and #payload.unlocks > 0)
+	local important = payload.kind == "Objective" or payload.kind == "Expand" or payload.discovery or (payload.unlocks and #payload.unlocks > 0)
 	if toastLocked then
-		if important and #importantQueue < 8 then table.insert(importantQueue, payload) end
+		if (important or payload.kind == "Buy" or payload.kind == "Sell") and #importantQueue < 8 then table.insert(importantQueue, payload) end
 		return
 	end
 	toastLocked = important == true
@@ -128,8 +130,9 @@ local function showToast(payload)
 	end)
 end
 local function message(payload)
-	if payload.kind == "Shop" then panels.openSeeds(); return end
-	if payload.kind == "Upgrades" then panels.openLand(); return end
+	if payload.kind == "Dialogue" then dialogue.open(payload); return end
+	if payload.kind == "Shop" then dialogue.close(); panels.openSeeds(); return end
+	if payload.kind == "Upgrades" then dialogue.close(); panels.openLand(); return end
 	if payload.kind == "Select" then panels.close() end
 	Effects.burst(payload)
 	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
@@ -147,6 +150,12 @@ local function refreshTarget()
 	local farms = workspace:FindFirstChild("MutantFarms")
 	local farm = farms and farms:FindFirstChild("Farm_" .. player.UserId)
 	local target = farm and farm:FindFirstChild(targetName)
+	if targetName == "Researcher" then
+		local town = workspace:FindFirstChild("MutantFarmTown")
+		local people = town and town:FindFirstChild("Townsfolk")
+		local researcher = people and people:FindFirstChild("Researcher")
+		target = researcher and researcher:FindFirstChild("Coat")
+	end
 	if targetName == "SeedShop" or targetName == "SellStand" then
 		local town = workspace:FindFirstChild("MutantFarmTown")
 		local shared = town and town:FindFirstChild(targetName)
@@ -191,6 +200,10 @@ local function update()
 	else
 		guide.Text, targetName = "1  BUY • Green Seed Shop → E / tap", "SeedShop"
 	end
+	local step = player:GetAttribute("ObjectiveStep")
+	local objective = step and Config.Objectives[step + 1]
+	if objective then guide.Text = "OBJECTIVE • " .. objective.Text end
+	if objective and objective.Event == "Researcher" then targetName = "Researcher" end
 	refreshTarget()
 end
 local updateQueued = false

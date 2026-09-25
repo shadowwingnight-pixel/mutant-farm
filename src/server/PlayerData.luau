@@ -1,5 +1,5 @@
 -- Pure, versioned serialization. Existing malformed/future records fail closed.
-local PlayerData = { Version = 1 }
+local PlayerData = { Version = 2 }
 local function integer(value, max)
 	return type(value) == "number" and value == value and value >= 0 and value <= max and value % 1 == 0
 end
@@ -24,16 +24,18 @@ end
 
 function PlayerData.decode(raw, config)
 	local fresh = raw == nil
-	if fresh then raw = { version = 1, coins = config.StartingCoins } end
+	if fresh then raw = { version = PlayerData.Version, coins = config.StartingCoins } end
 	if type(raw) ~= "table" then return nil, "Profile is not a table" end
 	-- Version 0 is the documented flat predecessor; missing version is accepted
 	-- only when coins is valid. Optional new fields migrate to explicit defaults.
 	local version = raw.version == nil and 0 or raw.version
-	if version ~= 0 and version ~= 1 then return nil, "Unsupported data version" end
+	if version ~= 0 and version ~= 1 and version ~= 2 then return nil, "Unsupported data version" end
 	if not integer(raw.coins, 9000000000000) then return nil, "Invalid Coins" end
 	local mutations = {}
 	for _, mutation in ipairs(config.Mutations) do mutations[mutation.Id] = true end
-	local result = { version = 1, coins = raw.coins, bag = {}, discoveries = {} }
+	local result = { version = 2, coins = raw.coins, bag = {}, discoveries = {} }
+	result.objectiveStep = raw.objectiveStep == nil and 0 or raw.objectiveStep
+	if not integer(result.objectiveStep, #config.Objectives) then return nil, "Invalid objective progress" end
 	result.earnedCoins = raw.earnedCoins == nil and 0 or raw.earnedCoins
 	result.expansionTier = raw.expansionTier == nil and 1 or raw.expansionTier
 	result.selectedCrop = raw.selectedCrop == nil and config.CropOrder[1] or raw.selectedCrop
@@ -55,15 +57,15 @@ function PlayerData.decode(raw, config)
 		end
 	end
 	result.unlocked[config.CropOrder[1]] = true
-	return result, fresh and "New player" or (version == 0 and "Migrated v0" or "Loaded")
+	return result, fresh and "New player" or (version < PlayerData.Version and "Migrated v" .. version or "Loaded")
 end
 
 function PlayerData.capture(state, config)
 	-- decode also deep-copies all durable fields so writes cannot observe later mutations.
-	local snapshot, problem = PlayerData.decode({ version = 1, coins = state.coins, seeds = state.seeds,
+	local snapshot, problem = PlayerData.decode({ version = 2, coins = state.coins, seeds = state.seeds,
 		bag = state.bag, earnedCoins = state.earnedCoins, harvested = state.harvested,
 		unlocked = state.unlocked, discoveries = state.discoveries, selectedCrop = state.selectedCrop,
-		expansionTier = state.expansionTier }, config)
+		expansionTier = state.expansionTier, objectiveStep = state.objectiveStep }, config)
 	assert(snapshot, problem)
 	return snapshot -- Never includes plot/growing-crop state.
 end

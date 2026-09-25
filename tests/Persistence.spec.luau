@@ -51,7 +51,7 @@ end)
 
 test("legacy fields migrate; malformed and future data fail closed", function()
 	local migrated = Data.decode({ coins = 345, seeds = { Tomato = 2 } }, Config)
-	assert(migrated.version == 1 and migrated.coins == 345 and migrated.expansionTier == 1)
+	assert(migrated.version == 2 and migrated.coins == 345 and migrated.expansionTier == 1 and migrated.objectiveStep == 0)
 	for _, bad in ipairs({ {}, false, "bad", { coins = -1 }, { coins = 1.5 }, { coins = math.huge },
 		{ coins = 0 / 0 }, { coins = 100, version = 99 }, { coins = 100, bag = false },
 		{ coins = 100, seeds = { Unknown = 1 } }, { coins = 100, unlocked = { Tomato = 1 } },
@@ -113,7 +113,7 @@ test("load failure produces no profile and never writes defaults", function()
 end)
 
 test("malformed saved records remain untouched", function()
-	for _, record in ipairs({ { coins = 900, version = 2 }, { recordVersion = 1 },
+	for _, record in ipairs({ { coins = 900, version = 99 }, { recordVersion = 1 },
 		{ recordVersion = 1, data = { coins = 900 }, lock = { token = "x", expires = math.huge } },
 		{ recordVersion = 8, data = { coins = 900 } } }) do
 		local env = fixture({ one = copy(record) })
