@@ -120,25 +120,12 @@ function World.expand(world, plotCount, ownerId)
 	model.GardenPath.Size = Vector3.new(6, 0.12, 43 + extension)
 	model.GardenPath.Position = origin + Vector3.new(0, 1.1, -extension / 2)
 	model.FarmSign.Position = origin + Vector3.new(0, 5, back + 1)
-	world.bounds:ClearAllChildren()
-	for _, x in ipairs({ -31, 31 }) do
-		for _, height in ipairs({ 2, 3.2 }) do
-			World.part(world.bounds, "FenceRail", Vector3.new(0.3, 0.25, 62 + extension), origin + Vector3.new(x, height, -extension / 2), cream, Enum.Material.Wood)
-		end
-		for z = back, 31, 10 do World.part(world.bounds, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x, 2.5, z), cream, Enum.Material.Wood) end
-	end
-	for _, z in ipairs({ back, 31 }) do
-		for _, x in ipairs({ -18, 18 }) do
-			for _, height in ipairs({ 2, 3.2 }) do World.part(world.bounds, "FenceRail", Vector3.new(26, 0.25, 0.3), origin + Vector3.new(x, height, z), cream, Enum.Material.Wood) end
-			for _, dx in ipairs({ -13, 0, 13 }) do World.part(world.bounds, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x + dx, 2.5, z), cream, Enum.Material.Wood) end
-		end
-	end
 	for index = #world.plots + 1, plotCount do
 		local position = origin + Vector3.new(((index - 1) % 3 - 1) * 13, 1.3, -5 - math.floor((index - 1) / 3) * 13)
-		World.part(model, "PlotBorder", Vector3.new(11, 0.5, 10), position, Color3.fromRGB(159, 119, 78), Enum.Material.WoodPlanks)
+		World.part(model, "PlotBorder", Vector3.new(11, 0.5, 10), position, Color3.fromRGB(148, 126, 91), Enum.Material.Slate)
 		local soil = World.part(model, "Soil_" .. index, Vector3.new(10, 0.6, 9), position + Vector3.new(0, 0.1, 0), Color3.fromRGB(83, 53, 40), Enum.Material.Ground)
 		soil:SetAttribute("OwnerUserId", ownerId)
-		for row = -3, 3, 2 do decoration(model, "SoilFurrow", Vector3.new(9, 0.08, 0.14), soil.Position + Vector3.new(0, 0.32, row), Color3.fromRGB(111, 72, 48), Enum.Material.Ground) end
+		for row = -3, 3, 2 do decoration(model, "SoilFurrow", Vector3.new(9, 0.08, 0.14), soil.Position + Vector3.new(0, 0.32, row), Color3.fromRGB(103, 70, 45), Enum.Material.Ground) end
 		local label = World.label(soil, "PLANT • Click / tap", 1.3)
 		local crop = Instance.new("Model")
 		crop.Name, crop.Parent = "Crop", model
@@ -147,6 +134,7 @@ function World.expand(world, plotCount, ownerId)
 			World.part(model, "ExpansionPath", Vector3.new(48, 0.12, 3), origin + Vector3.new(0, 1.1, position.Z - origin.Z + 6.5), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
 		end
 	end
+	require(script.Parent.FarmDesign).render(world, plotCount)
 end
 function World.render(view, plot, config)
 	require(script.Parent.CropVisuals).render(view, plot, config, World, os.clock())

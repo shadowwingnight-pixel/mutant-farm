@@ -15,7 +15,7 @@ function Town.new(world)
 		folder.Name, folder.Parent = name, model
 		return folder
 	end
-	local ground, square, shops, lab, river, nature = group("GroundAndPaths"), group("TownSquare"), group("ShopArchitecture"), group("ResearchLab"), group("RiverAndBridge"), group("Nature")
+	local ground, square, nature = group("GroundAndPaths"), group("TownSquare"), group("Nature")
 	self.routes = group("FarmDistrictRoads")
 	local function make(parent, name, size, position, tint, material, decorative)
 		local item = world.part(parent, name, size, position, tint, material)
@@ -45,17 +45,9 @@ function Town.new(world)
 		light.Parent = bulb
 		table.insert(self.lamps, { light = light, bulb = bulb })
 	end
-	local function roof(parent, x, z, width, depth, height, tint)
-		-- Two sloping panels, a ridge and deep eaves give modest buildings a distinct silhouette.
-		for _, side in ipairs({ -1, 1 }) do
-			local panel = make(parent, "PitchedRoof", V(width / 2 + 1.5, 0.6, depth + 2), V(x + side * width / 4, height, z), tint)
-			panel.CFrame *= CFrame.Angles(0, 0, -side * math.rad(20))
-		end
-		make(parent, "RoofRidge", V(0.7, 0.7, depth + 2.3), V(x, height + width / 4 * math.tan(math.rad(20)), z), cream, nil, true)
-	end
 	-- Walk surfaces match existing farm grass (Y=5), with no edits to Studio terrain/baseplate.
-	make(ground, "TownMeadow", V(136, 2, 144), V(-112, 4, 8), Color3.fromRGB(101, 176, 115), Enum.Material.Grass)
-	make(ground, "SouthBank", V(136, 2, 24), V(-112, 4, 106), Color3.fromRGB(101, 176, 115), Enum.Material.Grass)
+	make(ground, "TownMeadow", V(136, 2, 136), V(-112, 4, 4), Color3.fromRGB(101, 176, 115), Enum.Material.Grass)
+	make(ground, "SouthBank", V(136, 2, 16), V(-112, 4, 110), Color3.fromRGB(101, 176, 115), Enum.Material.Grass)
 	road(ground, "FarmToSquare", -100, 44, 124, 12)
 	road(ground, "ResearchWalk", -110, 4, 12, 80)
 	road(ground, "SeedWalk", -153, 36, 12, 28)
@@ -82,51 +74,8 @@ function Town.new(world)
 	end
 	sign(square, "MUTANT FARM TOWN\nSeed Square", -126, 61, 10)
 	sign(square, "← SEEDS   •   MARKET →\n↑ RESEARCH   •   FARMS →", -92, 57, 10)
-	-- Open-front service counters reuse the existing authoritative gameplay endpoints.
-	make(shops, "SeedStoreBack", V(24, 9, 1), V(-153, 9.5, 13), cream, Enum.Material.WoodPlanks)
-	for _, x in ipairs({ -165, -141 }) do make(shops, "SeedStoreSide", V(0.7, 9, 15), V(x, 9.5, 20), Color3.fromRGB(119, 170, 115), Enum.Material.WoodPlanks) end
-	roof(shops, -153, 20, 26, 18, 14, Color3.fromRGB(58, 119, 91))
-	self.shop = make(model, "SeedShop", V(19, 2.5, 3), V(-153, 6.25, 28), wood, Enum.Material.WoodPlanks)
-	make(shops, "SeedCounterTop", V(20, 0.25, 3.5), V(-153, 7.65, 28), cream)
-	world.label(self.shop, "SEEDS / FARM SUPPLIES\nE / tap • Browse seeds", 8, 225, 55)
-	for index = 1, 3 do
-		local x = -161 + index * 4
-		make(shops, "SupplyBin", V(2.8, 1, 2), V(x, 5.5, 17), wood, Enum.Material.Wood)
-		local sprout = make(shops, "DisplaySprout", V(1.5, 2, 1.5), V(x, 7, 17), Color3.fromRGB(100, 183, 94), nil, true)
-		sprout.Shape = Enum.PartType.Ball
-	end
-	self.sell = make(model, "SellStand", V(18, 2.5, 4), V(-65, 6.25, 19), wood, Enum.Material.WoodPlanks)
-	world.label(self.sell, "PRODUCE MARKET\nE / tap • Sell your harvest", 8, 225, 55)
-	for _, x in ipairs({ -75, -55 }) do make(shops, "MarketPost", V(0.6, 8, 0.6), V(x, 9, 13), cream, Enum.Material.Wood) end
-	for index = 0, 6 do make(shops, "MarketCanopy", V(3.2, 0.6, 14), V(-74.6 + index * 3.2, 13, 14), index % 2 == 0 and Color3.fromRGB(231, 155, 64) or cream) end
-	for index = 1, 3 do
-		local x = -77 + index * 6
-		make(shops, "ProduceCrate", V(4, 0.6, 3), V(x, 7.8, 19), Color3.fromRGB(168, 122, 68), Enum.Material.WoodPlanks)
-		local produce = make(shops, "ProduceDisplay", V(1.5, 1.5, 1.5), V(x, 8.5, 19), index == 3 and Color3.fromRGB(240, 153, 48) or Color3.fromRGB(230, 81, 84), nil, true)
-		produce.Shape = Enum.PartType.Ball
-	end
-	-- Closed greenhouse/lab: a future landmark only, no economy or mutation mechanics.
-	make(lab, "LabBody", V(28, 11, 20), V(-110, 10.5, -36), Color3.fromRGB(157, 191, 184), Enum.Material.SmoothPlastic)
-	roof(lab, -110, -36, 30, 22, 17, Color3.fromRGB(77, 105, 133))
-	local door = make(lab, "ClosedDoor", V(5, 7, 0.25), V(-110, 8.5, -25.8), Color3.fromRGB(51, 82, 95))
-	world.label(door, "MUTATION RESEARCH\nResearch wing • Coming later", 9, 230, 55)
-	for _, x in ipairs({ -119, -101 }) do
-		make(lab, "LabWindow", V(5, 4, 0.3), V(x, 11, -25.7), Color3.fromRGB(124, 228, 222), Enum.Material.Glass, true)
-		local pod = make(lab, "SpecimenPod", V(2.4, 4, 2.4), V(x, 7, -22), Color3.fromRGB(171, 132, 237), Enum.Material.Neon)
-		pod.Shape = Enum.PartType.Cylinder
-		pod.CFrame *= CFrame.Angles(0, 0, math.pi / 2)
-	end
-	-- Shallow, walk-out river: solid bed one stud below land; no deep-water trap.
-	make(river, "ShallowRiverBed", V(136, 2, 14), V(-112, 3, 87), Color3.fromRGB(128, 161, 151), Enum.Material.Sand)
-	local water = make(river, "RiverSurface", V(136, 0.12, 14), V(-112, 4.3, 87), Color3.fromRGB(66, 164, 188), Enum.Material.Glass, true)
-	water.Transparency = 0.3
-	for _, x in ipairs({ -167, -143, -78, -52 }) do make(river, "WaterRipple", V(8, 0.04, 0.15), V(x, 4.4, 87), Color3.fromRGB(175, 224, 225), nil, true) end
-	make(river, "BridgeDeck", V(13, 0.45, 19), V(-110, 5.1, 87), wood, Enum.Material.WoodPlanks)
-	for _, x in ipairs({ -117, -103 }) do
-		make(river, "BridgeRail", V(0.4, 0.5, 19), V(x, 7.8, 87), cream, Enum.Material.Wood)
-		for _, z in ipairs({ 78, 87, 96 }) do make(river, "BridgePost", V(0.7, 3, 0.7), V(x, 6.5, z), wood, Enum.Material.Wood) end
-	end
-	sign(river, "RIVER WALK\nBridge → future district", -124, 72)
+	require(script.Parent.TownArchitecture).build(self)
+	require(script.Parent.Waterfront).build(self)
 	for _, position in ipairs({ { -168, -27 }, { -168, -46 }, { -143, -52 }, { -72, -43 }, { -63, -21 }, { -174, 54 }, { -158, 68 }, { -57, 61 }, { -150, 108 }, { -70, 108 } }) do tree(position[1], position[2], 0.9) end
 	road(nature, "ForestTrail", -151, -15, 9, 40)
 	road(nature, "GroveLink", -130, -8, 46, 8)

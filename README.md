@@ -21,7 +21,7 @@ Clear/Rain/Thunderstorm and temporary Meteor Showers influence server mutation
 weights at maturity. See [Living World QA commands and balance](docs/MILESTONE5.md).
 The owner confirmed all Living World acceptance checks passed. Milestones 1–5 are validated and pushed.
 
-**Milestone 6A foundation confirmed loading/working by the owner; M6B visual validation pending.** A shared
+**Milestone 6A/B functionally confirmed by the owner; M6C visual approval pending.** A shared
 compact town west of the existing farms adds Seed Square, a seed store, produce
 market, research-lab exterior, grove, river and bridge. Follow the road left from
 your farm entrance. Town counters use the same inventory/economy as farm counters.
@@ -29,6 +29,9 @@ See [town layout and exact acceptance walkthrough](docs/MILESTONE6.md).
 M6B adds richer facades, three closed scenery buildings, planted streets/riverbanks,
 distant hills and warm exterior lighting. See the [short visual walkthrough](docs/MILESTONE6B.md).
 Milestone 6 remains local and has not been pushed or published.
+M6B visual quality was not accepted. M6C replaces landmark architecture, reshapes
+the farm boundaries and rebuilds the river/bridge. Follow the
+[M6C visual inspection steps](docs/MILESTONE6C.md). Milestone 6 is **not validated**.
 
 ## Source layout
 

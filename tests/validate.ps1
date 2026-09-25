@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 15) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 19) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, fifteen modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, nineteen modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -80,7 +80,7 @@ try {
         -not $mainSource.Contains('allowed(player, player, town.sell, Config.ShopDistance)') -or
         -not $mainSource.Contains('sellHarvest(player, sessions[player], town.sell)') -or
         -not $mainSource.Contains('town:updateLighting(environment.state:snapshot().phase)') -or
-        -not $townSource.Contains('ShallowRiverBed') -or
+        -not (Get-Content -Raw src/server/Waterfront.luau).Contains('ShallowRiverBed') -or
         $townSource.Contains('OnServerEvent') -or $townSource.Contains('DataStore')) {
         throw 'Town integration must reuse guarded transactions and existing environment state.'
     }
@@ -89,11 +89,24 @@ try {
     if ($serverModules -notcontains 'TownPolish' -or
         $polishSource -match 'RemoteEvent|ProximityPrompt|DataStore|Heartbeat|RenderStepped' -or
         -not $polishSource.Contains('solid == true, solid == true, solid == true') -or
-        -not $polishSource.Contains('root:SetAttribute("AddedPointLights", 3)') -or
+        -not $polishSource.Contains('root:SetAttribute("AddedPointLights", 0)') -or
         -not $townSource.Contains('if entry.light then entry.light.Enabled = lit end')) {
         throw 'Town polish must remain static scenery with bounded lighting and no gameplay endpoints.'
     }
     Write-Output 'PASS static visual-polish boundaries (not a visual/performance test).'
+    foreach ($name in @('SiteForms', 'TownArchitecture', 'Waterfront', 'FarmDesign')) {
+        $source = Get-Content -Raw "src/server/$name.luau"
+        if ($serverModules -notcontains $name -or $source -match 'RemoteEvent|DataStore|Heartbeat|RenderStepped') {
+            throw "Environment redesign must remain static server-generated geometry: $name"
+        }
+    }
+    $farmSource = Get-Content -Raw src/server/FarmWorld.luau
+    if (-not $farmSource.Contains('((index - 1) % 3 - 1) * 13, 1.3, -5 - math.floor((index - 1) / 3) * 13') -or
+        -not $farmSource.Contains('Vector3.new(10, 0.6, 9), position + Vector3.new(0, 0.1, 0)') -or
+        -not $farmSource.Contains('require(script.Parent.FarmDesign).render(world, plotCount)')) {
+        throw 'Validated soil target geometry or expansion presentation hook changed.'
+    }
+    Write-Output 'PASS static redesign boundaries and preserved soil geometry.'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
