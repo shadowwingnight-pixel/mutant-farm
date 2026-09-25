@@ -5,7 +5,7 @@ Buy seeds, plant, grow, mutate, harvest, sell, unlock crops and collect discover
 gameplay loop passed in Roblox Studio on 2026-09-25.
 All progress is session-only (no persistence). **Milestone 2 validated:** the owner confirmed the complete gameplay loop and mutation preview system passed in Roblox Studio; see [Milestone 2 testing](docs/MILESTONE2.md).
 
-**Milestone 3: implemented, awaiting manual validation.** Tomato → Strawberry → Pumpkin,
+**Milestone 3 validated by the project owner in Roblox Studio.** Tomato → Strawberry → Pumpkin,
 seed selection, automatic unlocks and a 15-entry Discovery Book. See [current balance,
 controls and manual tests](docs/MILESTONE3.md). Milestone 4 has not started.
 

@@ -1,7 +1,7 @@
 # Milestone 3 — crops, progression and discoveries
 
-Status: **implemented; awaiting the owner's Roblox Studio manual test**.
-Milestones 1–2 remain validated. Local commits only; do not push before approval.
+Status: **manual gameplay validation PASSED**, confirmed by the project owner.
+Milestones 1–3 are validated. The owner approved publication of this checkpoint.
 No Milestone 4 work, persistence or publishing is included.
 
 ## Balance and progression
