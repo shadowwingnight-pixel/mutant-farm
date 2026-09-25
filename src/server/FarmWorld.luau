@@ -73,12 +73,12 @@ local function kiosk(parent, position, name, color, text)
 	return stand
 end
 
-function World.create(parent, player, slot, config)
+function World.create(parent, player, slot, config, plotCount)
 	local model = Instance.new("Model")
 	model.Name = "Farm_" .. player.UserId
 	model:SetAttribute("OwnerUserId", player.UserId)
 	model.Parent = parent
-	local origin = Vector3.new(((slot - 1) % 4) * 80, 4, math.floor((slot - 1) / 4) * 80)
+	local origin = Vector3.new(((slot - 1) % 4) * 80, 4, math.floor((slot - 1) / 4) * 120)
 	World.part(model, "Meadow", Vector3.new(76, 2, 76), origin, green, Enum.Material.Grass)
 	World.part(model, "Path", Vector3.new(54, 0.15, 11), origin + Vector3.new(0, 1.1, 14), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
 	World.part(model, "GardenPath", Vector3.new(6, 0.12, 43), origin + Vector3.new(0, 1.1, 0), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
@@ -88,18 +88,6 @@ function World.create(parent, player, slot, config)
 	end
 	local sign = World.part(model, "FarmSign", Vector3.new(14, 2, 0.5), origin + Vector3.new(0, 5, -30), Color3.fromRGB(31, 70, 57))
 	World.label(sign, "MUTANT FARM\n" .. player.DisplayName .. "'s garden", 2, 240, 58)
-	for _, x in ipairs({ -31, 31 }) do
-		for _, height in ipairs({ 2, 3.2 }) do
-			World.part(model, "FenceRail", Vector3.new(0.3, 0.25, 62), origin + Vector3.new(x, height, 0), cream, Enum.Material.Wood)
-		end
-		for z = -30, 30, 10 do World.part(model, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x, 2.5, z), cream, Enum.Material.Wood) end
-	end
-	for _, z in ipairs({ -31, 31 }) do
-		for _, x in ipairs({ -18, 18 }) do
-			for _, height in ipairs({ 2, 3.2 }) do World.part(model, "FenceRail", Vector3.new(26, 0.25, 0.3), origin + Vector3.new(x, height, z), cream, Enum.Material.Wood) end
-			for _, dx in ipairs({ -13, 0, 13 }) do World.part(model, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x + dx, 2.5, z), cream, Enum.Material.Wood) end
-		end
-	end
 	for _, x in ipairs({ -34, 34 }) do
 		World.part(model, "TreeTrunk", Vector3.new(1.4, 6, 1.4), origin + Vector3.new(x, 4, -25), Color3.fromRGB(121, 88, 61), Enum.Material.Wood)
 		decoration(model, "TreeCrown", Vector3.new(7, 7, 7), origin + Vector3.new(x, 8, -25), Color3.fromRGB(60, 127, 80), Enum.Material.Grass, Enum.PartType.Ball)
@@ -113,23 +101,53 @@ function World.create(parent, player, slot, config)
 	local sell = kiosk(model, origin + Vector3.new(21, 1, 17), "SellStand", Color3.fromRGB(220, 143, 58), "4  SELL HARVEST\nCrops → Coins → Unlocks")
 	local gardenSign = decoration(model, "GardenGuide", Vector3.new(0.3, 2, 0.3), origin + Vector3.new(0, 2, 5), cream, Enum.Material.Wood)
 	World.label(gardenSign, "2  PLANT  →  3  HARVEST\nClick / tap the soil", 2, 220, 48)
-	local plots = {}
-	for index = 1, config.PlotCount do
+	local upgrade = World.part(model, "FarmUpgrade", Vector3.new(4, 3, 0.5), origin + Vector3.new(25, 3, 3), Color3.fromRGB(62, 109, 133), Enum.Material.Wood)
+	World.label(upgrade, "FARM EXPANSION\n6 → 9 → 12 plots", 3, 195, 52)
+	local bounds = Instance.new("Folder")
+	bounds.Name, bounds.Parent = "Boundaries", model
+	local world = { model = model, origin = origin, plots = {}, shop = shop, sell = sell, upgrade = upgrade,
+		bounds = bounds, spawn = CFrame.new(origin + Vector3.new(0, 5, 23)) }
+	World.expand(world, plotCount or config.PlotCount, player.UserId)
+	return world
+end
+
+function World.expand(world, plotCount, ownerId)
+	local model, origin = world.model, world.origin
+	local extension = (math.ceil(plotCount / 3) - 2) * 13
+	local back = -31 - extension
+	model.Meadow.Size = Vector3.new(76, 2, 76 + extension)
+	model.Meadow.Position = origin + Vector3.new(0, 0, -extension / 2)
+	model.GardenPath.Size = Vector3.new(6, 0.12, 43 + extension)
+	model.GardenPath.Position = origin + Vector3.new(0, 1.1, -extension / 2)
+	model.FarmSign.Position = origin + Vector3.new(0, 5, back + 1)
+	world.bounds:ClearAllChildren()
+	for _, x in ipairs({ -31, 31 }) do
+		for _, height in ipairs({ 2, 3.2 }) do
+			World.part(world.bounds, "FenceRail", Vector3.new(0.3, 0.25, 62 + extension), origin + Vector3.new(x, height, -extension / 2), cream, Enum.Material.Wood)
+		end
+		for z = back, 31, 10 do World.part(world.bounds, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x, 2.5, z), cream, Enum.Material.Wood) end
+	end
+	for _, z in ipairs({ back, 31 }) do
+		for _, x in ipairs({ -18, 18 }) do
+			for _, height in ipairs({ 2, 3.2 }) do World.part(world.bounds, "FenceRail", Vector3.new(26, 0.25, 0.3), origin + Vector3.new(x, height, z), cream, Enum.Material.Wood) end
+			for _, dx in ipairs({ -13, 0, 13 }) do World.part(world.bounds, "FencePost", Vector3.new(0.7, 3, 0.7), origin + Vector3.new(x + dx, 2.5, z), cream, Enum.Material.Wood) end
+		end
+	end
+	for index = #world.plots + 1, plotCount do
 		local position = origin + Vector3.new(((index - 1) % 3 - 1) * 13, 1.3, -5 - math.floor((index - 1) / 3) * 13)
 		World.part(model, "PlotBorder", Vector3.new(11, 0.5, 10), position, Color3.fromRGB(159, 119, 78), Enum.Material.WoodPlanks)
 		local soil = World.part(model, "Soil_" .. index, Vector3.new(10, 0.6, 9), position + Vector3.new(0, 0.1, 0), Color3.fromRGB(83, 53, 40), Enum.Material.Ground)
-		soil:SetAttribute("OwnerUserId", player.UserId)
-		for row = -3, 3, 2 do
-			decoration(model, "SoilFurrow", Vector3.new(9, 0.08, 0.14), soil.Position + Vector3.new(0, 0.32, row), Color3.fromRGB(111, 72, 48), Enum.Material.Ground)
-		end
+		soil:SetAttribute("OwnerUserId", ownerId)
+		for row = -3, 3, 2 do decoration(model, "SoilFurrow", Vector3.new(9, 0.08, 0.14), soil.Position + Vector3.new(0, 0.32, row), Color3.fromRGB(111, 72, 48), Enum.Material.Ground) end
 		local label = World.label(soil, "PLANT • Click / tap", 1.3)
 		local crop = Instance.new("Model")
 		crop.Name, crop.Parent = "Crop", model
-		plots[index] = { soil = soil, label = label, crop = crop }
+		world.plots[index] = { soil = soil, label = label, crop = crop }
+		if index > 6 and index % 3 == 1 then
+			World.part(model, "ExpansionPath", Vector3.new(48, 0.12, 3), origin + Vector3.new(0, 1.1, position.Z - origin.Z + 6.5), Color3.fromRGB(223, 206, 164), Enum.Material.Sand)
+		end
 	end
-	return { model = model, origin = origin, plots = plots, shop = shop, sell = sell, spawn = CFrame.new(origin + Vector3.new(0, 5, 23)) }
 end
-
 function World.render(view, plot, config)
 	require(script.Parent.CropVisuals).render(view, plot, config, World, os.clock())
 end

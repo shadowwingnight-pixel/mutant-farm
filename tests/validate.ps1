@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 7) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 10) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, seven modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, ten modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -44,6 +44,24 @@ try {
         throw 'Crop requests must whitelist identifiers and validate proximity/rate/character.'
     }
     Write-Output 'PASS static boundaries: Studio-only preview, outbound feedback, guarded crop requests.'
+    foreach ($name in @('Persistence', 'ProfileStore', 'PlayerData')) {
+        if ($serverModules -notcontains $name -or $clientModules -contains $name) {
+            throw "Persistence module must remain server-only: $name"
+        }
+    }
+    $persistenceSource = Get-Content -Raw src/server/Persistence.luau
+    $profileSource = Get-Content -Raw src/server/ProfileStore.luau
+    if (-not $persistenceSource.Contains('local studio = RunService:IsStudio()') -or
+        -not $persistenceSource.Contains('GetDataStore("MutantFarm_StudioTests", "test_v1")') -or
+        -not $persistenceSource.Contains('GetDataStore("MutantFarm_Players", "live_v1")') -or
+        -not $profileSource.Contains('self.backend:UpdateAsync') -or
+        $profileSource.Contains('SetAsync') -or
+        -not $profileSource.Contains('old.lock.token ~= profile.token') -or
+        -not $mainSource.Contains('game:BindToClose') -or
+        -not $mainSource.Contains('allowed(player, player, session.world.upgrade, Config.ShopDistance)')) {
+        throw 'Missing persistence separation, ownership, shutdown or expansion guard.'
+    }
+    Write-Output 'PASS static persistence boundaries and expansion request guard (not a runtime test).'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
@@ -53,6 +71,8 @@ try {
         }
         & $runner tests/FarmState.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Gameplay-state tests failed.' }
+        & $runner tests/Persistence.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Persistence tests failed.' }
     } else {
         Write-Output 'SKIP Luau compilation/state tests: pass -LuauDirectory with official standalone tools.'
     }

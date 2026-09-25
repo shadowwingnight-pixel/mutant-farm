@@ -7,6 +7,7 @@ local Effects = {}
 local activeParts = 0
 local lastCosmicPulse = -math.huge
 local colors = {
+	Expand = Color3.fromRGB(133, 219, 255),
 	Buy = Color3.fromRGB(164, 236, 136), Plant = Color3.fromRGB(188, 222, 127),
 	Harvest = Color3.fromRGB(255, 126, 104), Sell = Color3.fromRGB(255, 212, 95),
 	Normal = Color3.fromRGB(244, 102, 81), Golden = Color3.fromRGB(255, 209, 75),

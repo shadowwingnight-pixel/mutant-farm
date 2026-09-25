@@ -3,10 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local FarmState = require(script.Parent.FarmState)
 local World = require(script.Parent.FarmWorld)
+local Persistence = require(script.Parent.Persistence)
+local persistence = Persistence.new(Config)
 
 local farms = Instance.new("Folder")
 farms.Name, farms.Parent = "MutantFarms", workspace
 local sessions, slots = {}, {}
+local pendingLoads = {}
+local closingCount, shuttingDown = 0, false
 local random = Random.new()
 -- Outbound cosmetic events only. No OnServerEvent listener or economic input.
 local feedback = Instance.new("RemoteEvent")
@@ -17,6 +21,8 @@ actionRequest.Name, actionRequest.Parent = "FarmAction", ReplicatedStorage
 local function publish(player, session, message, effect)
 	local count, value = session.state:bagSummary()
 	player:SetAttribute("Coins", session.state.coins)
+	player:SetAttribute("PlotCount", #session.state.plots)
+	player:SetAttribute("ExpansionTier", session.state.expansionTier)
 	player:SetAttribute("HarvestCount", count)
 	player:SetAttribute("EarnedCoins", session.state.earnedCoins)
 	player:SetAttribute("SelectedCrop", session.state.selectedCrop)
@@ -56,7 +62,7 @@ end
 -- Native interaction events still need ownership, distance, alive and rate checks.
 local function allowed(player, owner, target, distance)
 	local session = sessions[player]
-	if player ~= owner or not session then return false end
+	if player ~= owner or not session or session.closing or shuttingDown or not persistence:canPlay(session.profile) then return false end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -69,8 +75,21 @@ local function allowed(player, owner, target, distance)
 	return true
 end
 
+local bindPlots
 -- Only identifiers are accepted. Prices, selected seed, unlocks and rewards stay server-owned.
 actionRequest.OnServerEvent:Connect(function(player, action, cropId)
+	if action == "Expand" then
+		local session = sessions[player]
+		if not session or not allowed(player, player, session.world.upgrade, Config.ShopDistance) then return end
+		local ok, message = session.state:expand()
+		if ok then
+			World.expand(session.world, #session.state.plots, player.UserId)
+			bindPlots(player, session)
+			session.nextSave = math.min(session.nextSave, os.clock() + 3)
+		end
+		publish(player, session, message, ok and { kind = "Expand", position = session.world.upgrade.Position } or nil)
+		return
+	end
 	if type(action) ~= "string" or (action ~= "Buy" and action ~= "Select") then return end
 	if type(cropId) ~= "string" or not Config.Crops[cropId] then return end
 	local session = sessions[player]
@@ -89,6 +108,7 @@ end)
 local function prompt(part, action, callback)
 	local interaction = Instance.new("ProximityPrompt")
 	interaction.ActionText, interaction.ObjectText = action, part.Name == "SeedShop" and "Seed Shop" or "Harvest Basket"
+	if part.Name == "FarmUpgrade" then interaction.ObjectText = "Farm Expansion" end
 	interaction.MaxActivationDistance = 12
 	interaction.RequiresLineOfSight = false
 	interaction.HoldDuration = 0
@@ -97,14 +117,29 @@ local function prompt(part, action, callback)
 end
 
 local function join(player)
-	if sessions[player] then return end
+	if sessions[player] or pendingLoads[player] or shuttingDown then return end
+	pendingLoads[player] = true
+	local profile, problem = persistence:load(player)
+	if not profile then
+		pendingLoads[player] = nil
+		warn("Mutant Farm load refused for " .. player.UserId .. ": " .. tostring(problem))
+		player:Kick("Your save could not be safely loaded. No existing data was replaced. Please rejoin later. " .. tostring(problem))
+		return
+	end
+	local state = FarmState.fromData(Config, profile.data)
+	if shuttingDown or player.Parent ~= Players then
+		persistence:save(player, { profile = profile, state = state }, true)
+		pendingLoads[player] = nil
+		return
+	end
 	local slot = 1
 	while slots[slot] do slot += 1 end
 	slots[slot] = true
-	local state = FarmState.new(Config)
-	local world = World.create(farms, player, slot, Config)
-	local session = { state = state, world = world, slot = slot, lastAction = -math.huge }
+	local world = World.create(farms, player, slot, Config, #state.plots)
+	local session = { state = state, world = world, slot = slot, lastAction = -math.huge,
+		profile = profile, nextSave = os.clock() + persistence.autosaveSeconds + slot % 7 }
 	sessions[player] = session
+	pendingLoads[player] = nil
 	publish(player, session, "Welcome! Buy a Tomato Seed at the green shop.")
 	prompt(world.shop, "Browse seeds", function(visitor)
 		if not allowed(visitor, player, world.shop, Config.ShopDistance) then return end
@@ -121,7 +156,24 @@ local function join(player)
 		end
 		publish(player, session, message, ok and { kind = "Sell", position = world.sell.Position, amount = earned, unlocks = unlocks } or nil)
 	end)
+	prompt(world.upgrade, "View farm upgrades", function(visitor)
+		if not allowed(visitor, player, world.upgrade, Config.ShopDistance) then return end
+		feedback:FireClient(player, { kind = "Upgrades" })
+	end)
+	bindPlots(player, session)
+	local function spawn(character)
+		local root = character:WaitForChild("HumanoidRootPart", 10)
+		if root and sessions[player] == session and player.Character == character then character:PivotTo(world.spawn) end
+	end
+	session.connection = player.CharacterAdded:Connect(spawn)
+	if player.Character then task.spawn(spawn, player.Character) end
+end
+
+bindPlots = function(player, session)
+	local state, world = session.state, session.world
 	for index, view in ipairs(world.plots) do
+		if view.bound then continue end
+		view.bound = true
 		local click = Instance.new("ClickDetector")
 		click.MaxActivationDistance = Config.InteractionDistance
 		click.Parent = view.soil
@@ -144,26 +196,52 @@ local function join(player)
 			publish(player, session, message, ok and { kind = action, position = view.soil.Position, mutation = mutation, cropId = cropId, discovery = newDiscovery } or nil)
 		end)
 	end
-	local function spawn(character)
-		local root = character:WaitForChild("HumanoidRootPart", 10)
-		if root and sessions[player] == session and player.Character == character then
-			character:PivotTo(world.spawn)
-		end
-	end
-	session.connection = player.CharacterAdded:Connect(spawn)
-	if player.Character then task.spawn(spawn, player.Character) end
 end
 
-Players.PlayerRemoving:Connect(function(player)
+local function leave(player)
 	local session = sessions[player]
-	if not session then return end
+	if not session or session.closing then return end
+	session.closing = true
+	closingCount += 1
 	sessions[player] = nil
+	local ok, saved, problem = pcall(function() return persistence:save(player, session, true) end)
+	if not ok or not saved then warn("Mutant Farm final save incomplete: " .. tostring(problem or saved)) end
 	slots[session.slot] = nil
 	session.connection:Disconnect()
 	session.world.model:Destroy()
-end)
+	closingCount -= 1
+end
+Players.PlayerRemoving:Connect(leave)
 Players.PlayerAdded:Connect(join)
-for _, player in ipairs(Players:GetPlayers()) do join(player) end
+for _, player in ipairs(Players:GetPlayers()) do task.spawn(join, player) end
+
+game:BindToClose(function()
+	shuttingDown = true
+	local remaining = {}
+	for player in pairs(sessions) do table.insert(remaining, player) end
+	for _, player in ipairs(remaining) do task.spawn(leave, player) end
+	local deadline = os.clock() + 25
+	while (closingCount > 0 or next(pendingLoads) ~= nil) and os.clock() < deadline do task.wait(0.1) end
+end)
+
+local RunService = game:GetService("RunService")
+if RunService:IsStudio() and RunService:IsServer() then
+	local command = Instance.new("BindableFunction")
+	command.Name = "MutantFarmSave"
+	command.OnInvoke = function(userId)
+		if not RunService:IsStudio() or not RunService:IsServer() then return "Studio server only." end
+		if userId ~= nil and (type(userId) ~= "number" or userId % 1 ~= 0) then return "Invalid UserId." end
+		local player = Players:GetPlayers()[1]
+		if userId ~= nil then player = Players:GetPlayerByUserId(userId) end
+		local session = player and sessions[player]
+		if not session or session.closing then return "No loaded session." end
+		if session.lastManualSave and os.clock() - session.lastManualSave < 10 then return "Wait 10 seconds between manual saves." end
+		session.lastManualSave = os.clock()
+		local saved, problem = persistence:save(player, session, false)
+		return saved and (persistence.cloud and "Saved" or "Session only; enable Studio test persistence before Play for rejoin tests") or problem
+	end
+	command.Parent = game:GetService("ServerStorage")
+end
 
 require(script.Parent.StudioPreview).install(Config, World, feedback, sessions)
 
@@ -171,6 +249,17 @@ while true do
 	task.wait(0.25)
 	local now = os.clock()
 	for player, session in pairs(sessions) do
+		if not persistence:canPlay(session.profile) then
+			player:Kick("Saving is unavailable or this profile moved to another server. Please rejoin; your last successful save is protected.")
+			continue
+		end
+		if not shuttingDown and now >= session.nextSave and not session.profile.saving then
+			session.nextSave = now + persistence.autosaveSeconds
+			task.spawn(function()
+				local saved = persistence:save(player, session, false)
+				if not saved and sessions[player] == session then session.nextSave = os.clock() + 15 end
+			end)
+		end
 		for _, index in ipairs(session.state:advance(now, function(low, high) return random:NextInteger(low, high) end)) do
 			local plot = session.state.plots[index]
 			World.render(session.world.plots[index], plot, Config)

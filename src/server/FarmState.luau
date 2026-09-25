@@ -4,7 +4,7 @@ FarmState.__index = FarmState
 
 function FarmState.new(config)
 	local self = setmetatable({ config = config, coins = config.StartingCoins, seeds = {}, bag = {}, plots = {},
-		earnedCoins = 0, harvested = {}, unlocked = {}, discoveries = {}, selectedCrop = config.CropOrder[1] }, FarmState)
+		earnedCoins = 0, harvested = {}, unlocked = {}, discoveries = {}, selectedCrop = config.CropOrder[1], expansionTier = 1 }, FarmState)
 	for cropId in pairs(config.Crops) do
 		self.seeds[cropId] = 0
 		self.bag[cropId] = {}
@@ -16,6 +16,29 @@ function FarmState.new(config)
 	end
 	self:refreshUnlocks()
 	return self
+end
+
+-- Data passed here has already been decoded/validated by PlayerData.
+function FarmState.fromData(config, data)
+	local self = FarmState.new(config)
+	for _, field in ipairs({ "coins", "seeds", "bag", "earnedCoins", "harvested", "unlocked", "discoveries", "selectedCrop", "expansionTier" }) do
+		self[field] = data[field]
+	end
+	self:refreshUnlocks()
+	if not self.unlocked[self.selectedCrop] then self.selectedCrop = config.CropOrder[1] end
+	self.plots = {}
+	for index = 1, config.Expansions[self.expansionTier].Plots do self.plots[index] = { stage = 0 } end
+	return self
+end
+
+function FarmState:expand()
+	local nextTier = self.config.Expansions[self.expansionTier + 1]
+	if not nextTier then return false, "Your farm is fully expanded." end
+	if self.coins < nextTier.Cost then return false, "Need " .. nextTier.Cost .. " Coins to expand." end
+	self.coins -= nextTier.Cost
+	self.expansionTier += 1
+	for index = #self.plots + 1, nextTier.Plots do self.plots[index] = { stage = 0 } end
+	return true, nextTier.Name .. " unlocked! " .. nextTier.Plots .. " plots"
 end
 
 function FarmState:refreshUnlocks()

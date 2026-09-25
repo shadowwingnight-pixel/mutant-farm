@@ -38,7 +38,7 @@ function Panels.create(gui, player, config, remote)
 	local subtitle = text(panel, "", UDim2.fromOffset(12, 42), UDim2.new(1, -24, 0, 38), 13)
 	local mode = "Seeds"
 	local panes = {}
-	for _, name in ipairs({ "Seeds", "Book" }) do
+	for _, name in ipairs({ "Seeds", "Book", "Land" }) do
 		local pane = Instance.new("ScrollingFrame")
 		pane.Name = name
 		pane.Position, pane.Size = UDim2.fromOffset(10, 85), UDim2.new(1, -20, 1, -95)
@@ -49,6 +49,11 @@ function Panels.create(gui, player, config, remote)
 		layout.Padding, layout.SortOrder = UDim.new(0, 9), Enum.SortOrder.LayoutOrder
 		panes[name] = pane
 	end
+	local landCard = Instance.new("Frame")
+	landCard.Size, landCard.BackgroundColor3, landCard.Parent = UDim2.new(1, -8, 0, 215), Color3.fromRGB(35, 61, 48), panes.Land
+	rounded(landCard)
+	local landStatus = text(landCard, "", UDim2.fromOffset(12, 10), UDim2.new(1, -24, 0, 130), 17)
+	local expand = button(landCard, "", UDim2.fromOffset(12, 156), UDim2.new(1, -24, 0, 42), function() remote:FireServer("Expand") end)
 	local shopRows, bookRows = {}, {}
 	for index, cropId in ipairs(config.CropOrder) do
 		local crop = config.Crops[cropId]
@@ -86,7 +91,18 @@ function Panels.create(gui, player, config, remote)
 		local nearShop = shop ~= nil and root ~= nil and (root.Position - shop.Position).Magnitude <= config.ShopDistance
 		title.Text = mode == "Seeds" and "SEEDS & PROGRESSION" or "MUTATION DISCOVERY BOOK"
 		subtitle.Text = mode == "Seeds" and ("Buy near your green shop. Close X to plant " .. (player:GetAttribute("SelectedCrop") or "Tomato") .. ".\nSell crops to unlock seeds; unlocks do not spend Coins.")
-			or (number("DiscoveryCount") .. "/" .. (#config.CropOrder * #config.Mutations) .. " discovered • Harvest to record a discovery\nSession collection • Unknown mutations stay hidden")
+			or (number("DiscoveryCount") .. "/" .. (#config.CropOrder * #config.Mutations) .. " discovered • Harvest to record a discovery\nUnknown mutations stay hidden")
+		if mode == "Land" then
+			title.Text, subtitle.Text = "GROW YOUR FARM", "Buy land at your blue expansion board.\nMore plots • More harvests • More discoveries"
+			local tier = number("ExpansionTier")
+			local current, nextTier = config.Expansions[tier], config.Expansions[tier + 1]
+			local board = farm and farm:FindFirstChild("FarmUpgrade")
+			local near = board and root and (root.Position - board.Position).Magnitude <= config.ShopDistance
+			local affordable = nextTier and number("Coins") >= nextTier.Cost
+			landStatus.Text = current and (current.Name .. " • " .. current.Plots .. " plots\n\n" .. (nextTier and (nextTier.Name .. " → " .. nextTier.Plots .. " plots\n" .. nextTier.Cost .. " Coins") or "MAX SIZE • Enjoy your full farm!")) or "Loading farm..."
+			expand.Text = not nextTier and "MAX SIZE" or (not near and "Visit blue expansion board" or (affordable and "Buy expansion" or "LOCKED • Need more Coins"))
+			expand.Interactable = nextTier ~= nil and near == true and affordable == true
+		end
 		for name, pane in pairs(panes) do pane.Visible = name == mode end
 		for _, cropId in ipairs(config.CropOrder) do
 			local crop = config.Crops[cropId]
@@ -94,7 +110,7 @@ function Panels.create(gui, player, config, remote)
 			local row = shopRows[cropId]
 			local rule = crop.Unlock
 			if unlocked then
-				row.status.Text = "UNLOCKED • Seeds: " .. number("Seeds_" .. cropId) .. " • Normal sale: " .. crop.BaseValue .. " Coins\nHarvested this session: " .. number("Harvested_" .. cropId)
+				row.status.Text = "UNLOCKED • Seeds: " .. number("Seeds_" .. cropId) .. " • Normal sale: " .. crop.BaseValue .. " Coins\nTotal harvested: " .. number("Harvested_" .. cropId)
 			else
 				row.status.Text = "LOCKED • Both requirements:\nSale Coins: " .. math.min(number("EarnedCoins"), rule.EarnedCoins) .. "/" .. rule.EarnedCoins
 					.. "  |  " .. rule.PreviousCrop .. " harvests: " .. math.min(number("Harvested_" .. rule.PreviousCrop), rule.Harvests) .. "/" .. rule.Harvests .. "\nSell a harvest to unlock."
@@ -126,6 +142,7 @@ function Panels.create(gui, player, config, remote)
 	local api = {}
 	function api.openSeeds() mode = "Seeds"; panel.Visible = true; refresh() end
 	function api.openBook() mode = "Book"; panel.Visible = true; refresh() end
+	function api.openLand() mode = "Land"; panel.Visible = true; refresh() end
 	function api.close() panel.Visible = false end
 	api.refresh = refresh
 	return api

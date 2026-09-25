@@ -60,6 +60,11 @@ for index, info in ipairs({ {"Coins", "Coins", Color3.fromRGB(255, 212, 95)}, {"
 end
 local basket = label(panel, "Basket empty", UDim2.fromOffset(10, 91), UDim2.new(1, -20, 0, 19), 12)
 local guide = label(panel, "BUY → PLANT → HARVEST → SELL", UDim2.fromOffset(10, 113), UDim2.new(1, -20, 0, 25), 13, Color3.fromRGB(175, 240, 205))
+local saveStatus = label(gui, "Loading...", UDim2.new(0.5, 0, 1, -30), UDim2.new(0.94, 0, 0, 23), 12)
+saveStatus.AnchorPoint = Vector2.new(0.5, 0)
+saveStatus.BackgroundColor3, saveStatus.BackgroundTransparency = dark, 0.2
+constrain(saveStatus, 600, 23)
+round(saveStatus, 6)
 
 local toast = label(gui, "", UDim2.new(0.5, 0, 1, -94), UDim2.new(0.86, 0, 0, 48), 17)
 toast.AnchorPoint, toast.BackgroundColor3, toast.BackgroundTransparency = Vector2.new(0.5, 0), dark, 0.06
@@ -103,7 +108,7 @@ local toastVersion = 0
 local toastLocked = false
 local importantQueue = {}
 local function showToast(payload)
-	local important = payload.discovery or (payload.unlocks and #payload.unlocks > 0)
+	local important = payload.kind == "Expand" or payload.discovery or (payload.unlocks and #payload.unlocks > 0)
 	if toastLocked then
 		if important and #importantQueue < 8 then table.insert(importantQueue, payload) end
 		return
@@ -123,6 +128,7 @@ local function showToast(payload)
 end
 local function message(payload)
 	if payload.kind == "Shop" then panels.openSeeds(); return end
+	if payload.kind == "Upgrades" then panels.openLand(); return end
 	if payload.kind == "Select" then panels.close() end
 	Effects.burst(payload)
 	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
@@ -152,6 +158,7 @@ local function refreshTarget()
 end
 local function amount(name) return player:GetAttribute(name) or 0 end
 local function update()
+	saveStatus.Text = (player:GetAttribute("SaveStatus") or "Loading...") .. " • " .. (player:GetAttribute("SaveMode") or "")
 	for name, card in pairs(cards) do
 		local value = amount(name)
 		card.count.Text = tostring(value)
@@ -168,9 +175,9 @@ local function update()
 		guide.Text, targetName = "3  HARVEST • Click / tap READY soil", "Soil"
 	elseif amount("HarvestCount") > 0 then
 		guide.Text, targetName = "4  SELL • Orange stall → E / tap", "SellStand"
-	elseif amount("Seeds_" .. selected) > 0 and amount("Growing") < Config.PlotCount then
+	elseif amount("Seeds_" .. selected) > 0 and amount("Growing") < (player:GetAttribute("PlotCount") or Config.PlotCount) then
 		guide.Text, targetName = "2  PLANT " .. selected .. " • Click empty soil", "Soil"
-	elseif amount("SeedCount") > 0 and amount("Growing") < Config.PlotCount then
+	elseif amount("SeedCount") > 0 and amount("Growing") < (player:GetAttribute("PlotCount") or Config.PlotCount) then
 		guide.Text, targetName = "Choose a seed to plant using Seeds above", ""
 	elseif amount("Growing") > 0 then
 		guide.Text, targetName = "GROWING • Watch for READY, then harvest", ""

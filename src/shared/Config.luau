@@ -2,6 +2,11 @@
 return {
 	StartingCoins = 100,
 	PlotCount = 6,
+	Expansions = {
+		{ Name = "Starter Farm", Plots = 6, Cost = 0 },
+		{ Name = "Expansion I", Plots = 9, Cost = 500 },
+		{ Name = "Expansion II", Plots = 12, Cost = 1500 },
+	},
 	InteractionDistance = 24,
 	ShopDistance = 14,
 	ActionCooldown = 0.2,
