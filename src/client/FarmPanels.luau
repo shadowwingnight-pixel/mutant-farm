@@ -89,8 +89,11 @@ function Panels.create(gui, player, config, remote)
 		local shop = farm and farm:FindFirstChild("SeedShop")
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		local nearShop = shop ~= nil and root ~= nil and (root.Position - shop.Position).Magnitude <= config.ShopDistance
+		local town = workspace:FindFirstChild("MutantFarmTown")
+		local townShop = town and town:FindFirstChild("SeedShop")
+		nearShop = nearShop or (townShop ~= nil and root ~= nil and (root.Position - townShop.Position).Magnitude <= config.ShopDistance)
 		title.Text = mode == "Seeds" and "SEEDS & PROGRESSION" or "MUTATION DISCOVERY BOOK"
-		subtitle.Text = mode == "Seeds" and ("Buy near your green shop. Close X to plant " .. (player:GetAttribute("SelectedCrop") or "Tomato") .. ".\nSell crops to unlock seeds; unlocks do not spend Coins.")
+		subtitle.Text = mode == "Seeds" and ("Buy at the town store or farm counter. Close X to plant " .. (player:GetAttribute("SelectedCrop") or "Tomato") .. ".\nSell crops to unlock seeds; unlocks do not spend Coins.")
 			or (number("DiscoveryCount") .. "/" .. (#config.CropOrder * #config.Mutations) .. " discovered • Harvest to record a discovery\nUnknown mutations stay hidden")
 		if mode == "Land" then
 			title.Text, subtitle.Text = "GROW YOUR FARM", "Buy land at your blue expansion board.\nMore plots • More harvests • More discoveries"

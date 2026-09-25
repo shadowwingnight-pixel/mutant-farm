@@ -147,6 +147,12 @@ local function refreshTarget()
 	local farms = workspace:FindFirstChild("MutantFarms")
 	local farm = farms and farms:FindFirstChild("Farm_" .. player.UserId)
 	local target = farm and farm:FindFirstChild(targetName)
+	if targetName == "SeedShop" or targetName == "SellStand" then
+		local town = workspace:FindFirstChild("MutantFarmTown")
+		local shared = town and town:FindFirstChild(targetName)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if shared and root and (not target or (root.Position - shared.Position).Magnitude < (root.Position - target.Position).Magnitude) then target = shared end
+	end
 	if targetName == "Soil" and farm then
 		for _, item in ipairs(farm:GetChildren()) do
 			if item:IsA("BasePart") and string.sub(item.Name, 1, 5) == "Soil_" then
@@ -195,7 +201,7 @@ player.AttributeChanged:Connect(function()
 end)
 ReplicatedStorage:WaitForChild("FarmFeedback").OnClientEvent:Connect(message)
 update()
-message({ kind = "Notice", text = "Start at the green Seed Shop • Follow the highlighted stall" })
+message({ kind = "Notice", text = "Welcome to Mutant Farm Town • Your farm is here; town road leads left" })
 Effects.startOrbits()
 task.spawn(function() require(script.Parent.EnvironmentView).start(gui, conditions, Config) end)
 -- Retry streamed/late-replicated world targets without per-frame scene searches.

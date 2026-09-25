@@ -6,6 +6,7 @@ local World = require(script.Parent.FarmWorld)
 local Persistence = require(script.Parent.Persistence)
 local persistence = Persistence.new(Config)
 local environment = require(script.Parent.EnvironmentService).new(Config)
+local town = require(script.Parent.TownWorld).new(World)
 
 local farms = Instance.new("Folder")
 farms.Name, farms.Parent = "MutantFarms", workspace
@@ -99,6 +100,7 @@ actionRequest.OnServerEvent:Connect(function(player, action, cropId)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
 	local target = action == "Buy" and session.world.shop or root
+	if action == "Buy" and (root.Position - town.shop.Position).Magnitude < (root.Position - target.Position).Magnitude then target = town.shop end
 	if not allowed(player, player, target, Config.ShopDistance) then return end
 	local ok, message
 	if action == "Buy" then ok, message = session.state:buy(cropId) else ok, message = session.state:select(cropId) end
@@ -116,6 +118,27 @@ local function prompt(part, action, callback)
 	interaction.Parent = part
 	interaction.Triggered:Connect(callback)
 end
+
+local function sellHarvest(player, session, stand)
+	local state = session.state
+	local before = state.coins
+	local ok, message, unlocks = state:sell()
+	local earned = state.coins - before
+	if ok then
+		message = "+" .. earned .. " Coins • Harvest sold!"
+		if #unlocks > 0 then message ..= "\nUNLOCKED: " .. table.concat(unlocks, ", ") .. "!" end
+	end
+	publish(player, session, message, ok and { kind = "Sell", position = stand.Position, amount = earned, unlocks = unlocks } or nil)
+end
+
+prompt(town.shop, "Browse seeds", function(player)
+	if not allowed(player, player, town.shop, Config.ShopDistance) then return end
+	feedback:FireClient(player, { kind = "Shop" })
+end)
+prompt(town.sell, "Sell all crops", function(player)
+	if not allowed(player, player, town.sell, Config.ShopDistance) then return end
+	sellHarvest(player, sessions[player], town.sell)
+end)
 
 local function join(player)
 	if sessions[player] or pendingLoads[player] or shuttingDown then return end
@@ -137,25 +160,19 @@ local function join(player)
 	while slots[slot] do slot += 1 end
 	slots[slot] = true
 	local world = World.create(farms, player, slot, Config, #state.plots)
+	town:connectFarm(world, player, slot)
 	local session = { state = state, world = world, slot = slot, lastAction = -math.huge,
 		profile = profile, nextSave = os.clock() + persistence.autosaveSeconds + slot % 7 }
 	sessions[player] = session
 	pendingLoads[player] = nil
-	publish(player, session, "Welcome! Buy a Tomato Seed at the green shop.")
+	publish(player, session, "Welcome to Mutant Farm Town! Your farm is here • Follow the road left to Seed Square.")
 	prompt(world.shop, "Browse seeds", function(visitor)
 		if not allowed(visitor, player, world.shop, Config.ShopDistance) then return end
 		feedback:FireClient(player, { kind = "Shop" })
 	end)
 	prompt(world.sell, "Sell all crops", function(visitor)
 		if not allowed(visitor, player, world.sell, Config.ShopDistance) then return end
-		local before = state.coins
-		local ok, message, unlocks = state:sell()
-		local earned = state.coins - before
-		if ok then
-			message = "+" .. earned .. " Coins • Harvest sold!"
-			if #unlocks > 0 then message ..= "\nUNLOCKED: " .. table.concat(unlocks, ", ") .. "!" end
-		end
-		publish(player, session, message, ok and { kind = "Sell", position = world.sell.Position, amount = earned, unlocks = unlocks } or nil)
+		sellHarvest(player, session, world.sell)
 	end)
 	prompt(world.upgrade, "View farm upgrades", function(visitor)
 		if not allowed(visitor, player, world.upgrade, Config.ShopDistance) then return end
@@ -249,6 +266,7 @@ require(script.Parent.StudioPreview).install(Config, World, feedback, sessions)
 while true do
 	task.wait(0.25)
 	environment:step()
+	town:updateLighting(environment.state:snapshot().phase)
 	local now = os.clock()
 	for player, session in pairs(sessions) do
 		if not persistence:canPlay(session.profile) then

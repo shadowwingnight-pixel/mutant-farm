@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 13) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 14) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, thirteen modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, fourteen modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -74,6 +74,17 @@ try {
         throw 'Environment authority, Studio control or maturity integration boundary missing.'
     }
     Write-Output 'PASS static environment authority and Studio controls (not a runtime test).'
+    $townSource = Get-Content -Raw src/server/TownWorld.luau
+    if ($serverModules -notcontains 'TownWorld' -or
+        -not $mainSource.Contains('allowed(player, player, town.shop, Config.ShopDistance)') -or
+        -not $mainSource.Contains('allowed(player, player, town.sell, Config.ShopDistance)') -or
+        -not $mainSource.Contains('sellHarvest(player, sessions[player], town.sell)') -or
+        -not $mainSource.Contains('town:updateLighting(environment.state:snapshot().phase)') -or
+        -not $townSource.Contains('ShallowRiverBed') -or
+        $townSource.Contains('OnServerEvent') -or $townSource.Contains('DataStore')) {
+        throw 'Town integration must reuse guarded transactions and existing environment state.'
+    }
+    Write-Output 'PASS static town integration boundaries (not a navigation/runtime test).'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
