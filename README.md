@@ -9,7 +9,8 @@ gameplay loop passed in Roblox Studio on 2026-09-25.
 seed selection, automatic unlocks and a 15-entry Discovery Book. See [current balance,
 controls and manual tests](docs/MILESTONE3.md).
 
-**Milestone 4 implemented; manual persistence/rejoin validation pending.** Versioned
+**Milestone 4 validated by the project owner in Roblox Studio:** save/rejoin preserved
+progression and purchased farm expansion; the expansion system works. Versioned
 server saves and purchasable 6 → 9 → 12 plot farms. Studio defaults to session-only
 memory; cloud testing requires an explicit isolated test slot. Follow the
 [Milestone 4 safe test instructions](docs/MILESTONE4.md) before enabling cloud tests.
@@ -79,7 +80,7 @@ rojo build default.project.json -o build.rbxlx
 ```
 
 Generated place files are ignored by Git. GitHub is not required for Studio sync.
-Milestones 1–3 are validated and pushed. Milestone 4 commits remain local pending validation.
+Milestones 1–4 are validated; the owner approved pushing the Milestone 4 checkpoint.
 
 ## Controls and mutation balance
 
@@ -135,7 +136,8 @@ Status recorded on 2026-09-25:
 - Rojo build and generated-script layout checks: **PASS** at the implementation checkpoint.
 - Standalone Luau compilation/state tests: written but not run; test-tool download was not approved.
 - Milestone 4 Rojo build/static checks: **PASS**. Persistence/expansion tests are
-  written but unexecuted without standalone Luau. Studio rejoin validation is **pending**.
+  written but unexecuted without standalone Luau. Studio persistence acceptance is
+  **PASS**, confirmed by the owner: progression and purchased expansion survived save/rejoin.
 - Additional multiplayer, mobile and rare-mutation visual checks below are not yet confirmed.
 
 Run `./tests/validate.ps1` for the build and generated-script layout check.

@@ -1,8 +1,9 @@
 # Milestone 4 — persistence and farm expansion
 
-Status: **implemented; awaiting owner Studio acceptance**. Milestones 1–3 remain
-validated. Milestone 3 was pushed at `b5a0502`; Milestone 4 must remain local until
-the owner validates and authorizes its push. No experience has been published.
+Status: **persistence acceptance PASSED**, confirmed by the project owner in Roblox
+Studio. Save/rejoin preserved progression and purchased farm expansion, and the
+expansion system works. Milestones 1–4 are validated; the owner authorized pushing
+this checkpoint. This task did not publish the Roblox experience.
 
 ## What is saved
 
@@ -143,8 +144,9 @@ to the running server and disappear when it stops. No cloud requests occur.
   failed loads/writes, competing/expired leases, idempotent retries and release/rejoin.
   **Not executed:** standalone Luau is not installed. Existing gameplay tests are
   also retained. No new dependencies were installed.
-- **Not yet verified in Studio:** runtime UI/land layout, real DataStore responses,
-  API failures, leave/shutdown saves and rejoin persistence. Rojo does not compile
-  Luau or prove gameplay behavior. Report results before marking Milestone 4 validated.
+- **Owner-confirmed Studio acceptance: PASS.** Save/rejoin preserved progression
+  and purchased farm expansion; the expansion system works.
+- Separate failure-injection, forced-shutdown, multiplayer and fresh-profile checks
+  have not been individually reported. Rojo does not compile Luau or prove runtime behavior.
 
 Milestone 5 has not started.
