@@ -40,7 +40,13 @@ townsfolk offer contextual dialogue, and a six-step starter objective sequence g
 older profiles retain their items and receive fresh objective progress. Follow the
 [M7 fresh-player, dialogue and persistence tests](docs/MILESTONE7.md). NPC dialogue,
 objective progression, six one-time rewards, reactive dialogue, farming and save/rejoin
-passed. The owner authorized pushing M7. No experience publication; Milestone 8 has not started.
+passed. The owner authorized pushing M7. No experience publication was performed.
+
+**Milestone 8 implemented locally; Studio acceptance pending.** Dr. Lumen's Research
+workbench consumes two chosen harvests and 20 Coins to create an experimental seed.
+Four inherited traits reuse existing farming; seeds, trait-bearing harvests and
+research discoveries persist through schema v3. See [M8 controls, balance, Studio QA
+and exact acceptance tests](docs/MILESTONE8.md). Nothing pushed or published; M9 not started.
 
 ## Source layout
 

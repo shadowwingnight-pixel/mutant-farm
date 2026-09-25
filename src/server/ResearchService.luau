@@ -64,7 +64,7 @@ function Service.install(config, world, town, sessions, allowed, publish, feedba
 		if not session or session.closing or session.profile.saving then return "Wait for a loaded, idle session." end
 		local state = session.state
 		if action == "Inspect" then
-			return HttpService:JSONEncode({seeds=state.experimentalSeeds,harvests=state.experimentalBag,discoveries=state.researchFound,count=state.researchCount,selected=state.selectedExperiment,traits=config.Research.Traits,catalog=config.Research.Catalog})
+			return HttpService:JSONEncode({coins=state.coins,specimens=state.bag,seeds=state.experimentalSeeds,harvests=state.experimentalBag,discoveries=state.researchFound,count=state.researchCount,selected=state.selectedExperiment,traits=config.Research.Traits,catalog=config.Research.Catalog})
 		elseif action == "Coins" then
 			if type(amount) ~= "number" or amount%1 ~= 0 or amount < 0 or amount > 5000 then return "Amount must be 0–5000." end
 			state.coins = amount
