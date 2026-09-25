@@ -1,7 +1,10 @@
 # M7 — Living Town
 
-Status: ready for owner Studio testing, not runtime-validated. Local only; no push,
-publication or Milestone 8 work.
+Status: **manual Studio acceptance PASSED**, confirmed by the project owner.
+NPC dialogue, objective progression, six one-time rewards, environment-reactive
+dialogue, farming interactions and persistence/rejoin behavior work correctly.
+The owner authorized pushing completed M7 commits. No experience publication or
+Milestone 8 work.
 
 ## Characters and controls
 
@@ -120,4 +123,4 @@ Rojo serializes source and cannot prove syntax, runtime behavior or save/rejoin.
 NPCs stand in place; dialogue does not update mid-conversation. No extra ambient
 residents, interiors or large quest system. Town geometry, crop visuals, weather,
 profile storage protocol and existing Studio preview controls are unchanged.
-Owner manual acceptance remains required before any push.
+Owner manual acceptance has passed; pushing completed M7 commits is authorized.

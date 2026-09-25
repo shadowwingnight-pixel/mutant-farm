@@ -34,12 +34,13 @@ M6C replaces landmark architecture, reshapes
 the farm boundaries and rebuilds the river/bridge. Follow the
 [M6C visual inspection steps](docs/MILESTONE6C.md).
 
-**Milestone 7 implemented locally; owner Studio acceptance pending.** Three original
+**Milestone 7 validated by the owner in Roblox Studio.** Three original
 townsfolk offer contextual dialogue, and a six-step starter objective sequence gives
 30 Coins total. Objective progress uses schema v2 in the existing save system;
 older profiles retain their items and receive fresh objective progress. Follow the
-[M7 fresh-player, dialogue and persistence tests](docs/MILESTONE7.md). Not pushed
-or published. Milestone 8 has not started.
+[M7 fresh-player, dialogue and persistence tests](docs/MILESTONE7.md). NPC dialogue,
+objective progression, six one-time rewards, reactive dialogue, farming and save/rejoin
+passed. The owner authorized pushing M7. No experience publication; Milestone 8 has not started.
 
 ## Source layout
 
