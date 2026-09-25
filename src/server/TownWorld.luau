@@ -142,6 +142,7 @@ function Town.new(world)
 	for _, z in ipairs({ 37, 51 }) do make(square, "TownGatePost", V(0.7, 9, 0.7), V(-44, 9.5, z), wood, Enum.Material.Wood) end
 	local gate = make(square, "TownWelcome", V(0.8, 1.4, 15), V(-44, 14.5, 44), Color3.fromRGB(41, 83, 67))
 	world.label(gate, "MUTANT FARM TOWN\n← Seed Square   •   Farm District →", 2, 250, 52)
+	require(script.Parent.TownPolish).build(self)
 	local partCount = 0
 	for _, item in ipairs(model:GetDescendants()) do if item:IsA("BasePart") then partCount += 1 end end
 	model:SetAttribute("StaticTownParts", partCount)
@@ -175,6 +176,7 @@ function Town:connectFarm(farm, player, slot)
 	local arch = world.part(farm.model, "FarmEntrance", V(13, 1.2, 0.7), origin + V(0, 8.2, 32), cream, Enum.Material.Wood)
 	world.label(arch, player.DisplayName .. "'s FARM\n← TOWN SQUARE • Seeds • Market", 2, 235, 48)
 	farm.spawn = CFrame.lookAt(origin + V(0, 5, 35), origin + V(-35, 5, 44))
+	require(script.Parent.TownPolish).farm(self, farm)
 end
 
 function Town:updateLighting(phase)
@@ -182,7 +184,7 @@ function Town:updateLighting(phase)
 	self.phase = phase
 	local lit = phase ~= "Day"
 	for _, entry in ipairs(self.lamps) do
-		entry.light.Enabled = lit
+		if entry.light then entry.light.Enabled = lit end
 		entry.bulb.Material = lit and Enum.Material.Neon or Enum.Material.SmoothPlastic
 	end
 end
