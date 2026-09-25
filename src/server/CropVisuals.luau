@@ -3,9 +3,13 @@ local CropVisuals = {}
 
 function CropVisuals.render(view, plot, config, world, now)
 	view.soil:SetAttribute("GrowthStage", plot.stage)
+	local cropConfig = config.Crops[plot.cropId]
+	local ready = cropConfig ~= nil and plot.stage == #cropConfig.GrowthStages
+	view.soil:SetAttribute("Ready", ready)
 	view.crop:RemoveTag("CosmicCrop")
 	view.crop:ClearAllChildren()
 	view.label.Parent.StudsOffset = Vector3.new(0, 1.3, 0)
+	view.label.Parent.Size = UDim2.fromOffset(166, 42)
 	view.label.TextColor3 = Color3.fromRGB(255, 242, 205)
 	view.visualPhase = "EMPTY"
 	if plot.stage == 0 then
@@ -20,23 +24,24 @@ function CropVisuals.render(view, plot, config, world, now)
 		if shape then part.Shape = shape end
 		return part
 	end
-	local leafGreen = Color3.fromRGB(61, 143, 66)
-	if plot.stage == 1 and now - plot.plantedAt < 1.3 then
+	local visual = cropConfig.Visual
+	local leafGreen = Color3.fromRGB(table.unpack(visual.LeafColor))
+	if plot.stage == 1 and now - plot.plantedAt < cropConfig.SeedSeconds then
 		view.visualPhase = "SEED"
 		piece("SeedMound", Vector3.new(1.5, 0.3, 1.2), base + Vector3.new(0, 0.06, 0), Color3.fromRGB(105, 67, 43), Enum.Material.Ground, Enum.PartType.Ball)
 		piece("Seed", Vector3.new(0.25, 0.14, 0.4), base + Vector3.new(0, 0.24, 0), Color3.fromRGB(240, 219, 158), nil, Enum.PartType.Ball)
 		view.label.Text = "SEED PLANTED"
 		return
 	end
-	view.visualPhase = ({ "SPROUT", "YOUNG PLANT", "TOMATO PLANT", "READY" })[plot.stage]
+	view.visualPhase = cropConfig.GrowthStages[plot.stage].Label
 	local mutation = config.Mutations[1]
 	for _, candidate in ipairs(config.Mutations) do
 		if candidate.Id == plot.mutation then mutation = candidate; break end
 	end
-	local ready = plot.stage == 4
 	local scale = ready and mutation.Scale or 1
-	local color = ready and Color3.fromRGB(table.unpack(mutation.Color)) or Color3.fromRGB(140, 187, 76)
-	local height = ({ 0.8, 1.9, 3.2, 3.6 })[plot.stage] * scale
+	local fruitColor = (mutation.Id == "Normal" or mutation.Id == "Giant") and visual.Color or mutation.Color
+	local color = ready and Color3.fromRGB(table.unpack(fruitColor)) or Color3.fromRGB(140, 187, 76)
+	local height = cropConfig.GrowthStages[plot.stage].Height * scale
 	if ready and mutation.Id == "Golden" then leafGreen = Color3.fromRGB(192, 162, 49) end
 	if ready and mutation.Id == "Crystal" then leafGreen = Color3.fromRGB(59, 178, 181) end
 	if ready and mutation.Id == "Cosmic" then leafGreen = Color3.fromRGB(102, 66, 163) end
@@ -48,18 +53,45 @@ function CropVisuals.render(view, plot, config, world, now)
 			leaf.CFrame *= CFrame.Angles(0, math.rad(level * 25), side * math.rad(24))
 		end
 	end
-	if plot.stage >= 3 then
-		piece("SupportStake", Vector3.new(0.12, height + 0.35, 0.12), base + Vector3.new(0, height / 2, 0.45 * scale), Color3.fromRGB(165, 126, 77), Enum.Material.Wood)
-		for index, offset in ipairs({ Vector3.new(-0.85, 0.64, -0.3), Vector3.new(0.85, 0.79, 0.1), Vector3.new(0, 0.98, -0.6) }) do
-			local center = base + Vector3.new(offset.X * scale, offset.Y * height, offset.Z * scale)
-			local size = Vector3.new(1.25, 1.05, 1.2) * scale
+	if visual.Style ~= "Upright" and plot.stage >= 2 then
+		for index = 1, 5 do
+			local angle = index * math.pi * 2 / 5
+			local spread = (visual.Style == "Vine" and 1.6 or 0.8) * scale
+			local leaf = piece("GroundLeaf", Vector3.new(1.3, 0.18, 0.8) * scale, base + Vector3.new(math.cos(angle) * spread, 0.25 * scale, math.sin(angle) * spread), leafGreen)
+			leaf.CFrame *= CFrame.Angles(0, -angle, 0.15)
+		end
+	end
+	if plot.stage >= visual.FruitStage then
+		if visual.Style == "Upright" then
+			piece("SupportStake", Vector3.new(0.12, height + 0.35, 0.12), base + Vector3.new(0, height / 2, 0.45 * scale), Color3.fromRGB(165, 126, 77), Enum.Material.Wood)
+		end
+		for index, offset in ipairs(visual.Offsets) do
+			local center = base + Vector3.new(offset[1] * scale, offset[2] * height, offset[3] * scale)
+			local size = Vector3.new(table.unpack(visual.FruitSize)) * scale * (not ready and visual.Style ~= "Upright" and 0.6 or 1)
 			local material = Enum.Material.SmoothPlastic
 			if ready and mutation.Id == "Golden" then material = Enum.Material.Metal end
 			if ready and (mutation.Id == "Crystal" or mutation.Id == "Cosmic") then material = Enum.Material.Neon end
-			local fruit = piece(index == 3 and "Tomato" or "Fruit", size, center, color, material, Enum.PartType.Ball)
+			local fruit = piece(index == #visual.Offsets and "FruitCore" or "Fruit", size, center, color, material, Enum.PartType.Ball)
 			if ready and mutation.Id == "Golden" then fruit.Reflectance = 0.18 end
-			local crown = piece("Calyx", Vector3.new(0.8, 0.12, 0.8) * scale, center + Vector3.new(0, 0.53 * scale, 0), leafGreen)
+			local crown = piece("Calyx", Vector3.new(0.8, 0.12, 0.8) * scale, center + Vector3.new(0, size.Y / 2, 0), leafGreen)
 			crown.CFrame *= CFrame.Angles(0, math.rad(45), 0)
+			if visual.Style == "Berry" then
+				if ready then
+					for dot = 1, 5 do
+						local angle = dot * math.pi * 2 / 5
+						piece("BerrySeed", Vector3.new(0.07, 0.14, 0.07) * scale, center + Vector3.new(math.cos(angle) * size.X * 0.44, (dot % 2 - 0.5) * size.Y * 0.3, math.sin(angle) * size.Z * 0.44), Color3.fromRGB(255, 226, 148), nil, Enum.PartType.Ball)
+					end
+				else
+					piece("Blossom", Vector3.new(0.5, 0.13, 0.5) * scale, center + Vector3.new(0, size.Y / 2 + 0.15, 0), Color3.fromRGB(255, 245, 222))
+				end
+			elseif visual.Style == "Vine" then
+				for rib = 1, 6 do
+					local angle = rib * math.pi / 3
+					piece("PumpkinRib", size * Vector3.new(0.57, 1, 0.57), center + Vector3.new(math.cos(angle) * size.X * 0.25, 0, math.sin(angle) * size.Z * 0.25), color:Lerp(Color3.new(0, 0, 0), rib % 2 * 0.08), material, Enum.PartType.Ball)
+				end
+				local stalk = piece("CurvedStalk", Vector3.new(0.25, 0.65, 0.25) * scale, center + Vector3.new(0, size.Y / 2 + 0.2 * scale, 0), leafGreen)
+				stalk.CFrame *= CFrame.Angles(0, 0, 0.35)
+			end
 			if ready and (mutation.Id == "Crystal" or mutation.Id == "Cosmic") then
 				for shardIndex = 1, 3 do
 					local angle = shardIndex * math.pi * 2 / 3
@@ -70,7 +102,7 @@ function CropVisuals.render(view, plot, config, world, now)
 		end
 	end
 	if ready and mutation.Id ~= "Normal" and mutation.Id ~= "Giant" then
-		local fruit = view.crop:FindFirstChild("Tomato")
+		local fruit = view.crop:FindFirstChild("FruitCore")
 		local light = Instance.new("PointLight")
 		light.Color, light.Brightness, light.Range, light.Shadows = color, 0.7, 9, false
 		light.Parent = fruit
@@ -90,7 +122,8 @@ function CropVisuals.render(view, plot, config, world, now)
 		highlight.Adornee, highlight.Parent = view.crop, view.crop
 		view.crop:AddTag("CosmicCrop")
 	end
-	view.label.Text = ready and (string.upper(mutation.Id) .. " • READY\nClick / tap to harvest") or view.visualPhase
+	view.label.Text = ready and (string.upper(mutation.Id) .. " " .. plot.cropId .. "\nREADY • Click / tap") or (plot.cropId .. " • " .. view.visualPhase)
+	if ready then view.label.Parent.Size = UDim2.fromOffset(200, 48) end
 	view.label.TextColor3 = ready and color or Color3.fromRGB(255, 242, 205)
 	view.label.Parent.StudsOffset = Vector3.new(0, ready and height + 1.4 or 1.3, 0)
 end

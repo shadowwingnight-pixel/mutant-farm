@@ -11,23 +11,39 @@ local random = Random.new()
 -- Outbound cosmetic events only. No OnServerEvent listener or economic input.
 local feedback = Instance.new("RemoteEvent")
 feedback.Name, feedback.Parent = "FarmFeedback", ReplicatedStorage
+local actionRequest = Instance.new("RemoteEvent")
+actionRequest.Name, actionRequest.Parent = "FarmAction", ReplicatedStorage
 
 local function publish(player, session, message, effect)
 	local count, value = session.state:bagSummary()
 	player:SetAttribute("Coins", session.state.coins)
-	player:SetAttribute("TomatoSeeds", session.state.seeds.Tomato)
-	player:SetAttribute("Tomatoes", count)
+	player:SetAttribute("HarvestCount", count)
+	player:SetAttribute("EarnedCoins", session.state.earnedCoins)
+	player:SetAttribute("SelectedCrop", session.state.selectedCrop)
 	player:SetAttribute("HarvestValue", value)
 	local growing, ready = 0, 0
 	for _, plot in ipairs(session.state.plots) do
-		if plot.stage > 0 and plot.stage < 4 then growing += 1 end
-		if plot.stage == 4 then ready += 1 end
+		local crop = Config.Crops[plot.cropId]
+		if crop and plot.stage > 0 and plot.stage < #crop.GrowthStages then growing += 1 end
+		if crop and plot.stage == #crop.GrowthStages then ready += 1 end
 	end
 	player:SetAttribute("Growing", growing)
 	player:SetAttribute("Ready", ready)
-	for _, mutation in ipairs(Config.Mutations) do
-		player:SetAttribute("Tomato_" .. mutation.Id, session.state.bag.Tomato[mutation.Id] or 0)
+	local seeds, discoveries = 0, 0
+	for _, cropId in ipairs(Config.CropOrder) do
+		seeds += session.state.seeds[cropId]
+		player:SetAttribute("Seeds_" .. cropId, session.state.seeds[cropId])
+		player:SetAttribute("Unlocked_" .. cropId, session.state.unlocked[cropId] == true)
+		player:SetAttribute("Harvested_" .. cropId, session.state.harvested[cropId])
+		for _, mutation in ipairs(Config.Mutations) do
+			local discovered = session.state.discoveries[cropId][mutation.Id] == true
+			if discovered then discoveries += 1 end
+			player:SetAttribute("Found_" .. cropId .. "_" .. mutation.Id, discovered)
+			player:SetAttribute("Bag_" .. cropId .. "_" .. mutation.Id, session.state.bag[cropId][mutation.Id] or 0)
+		end
 	end
+	player:SetAttribute("SeedCount", seeds)
+	player:SetAttribute("DiscoveryCount", discoveries)
 	if message then
 		player:SetAttribute("FarmMessage", message)
 		player:SetAttribute("FarmMessageId", (player:GetAttribute("FarmMessageId") or 0) + 1)
@@ -53,9 +69,26 @@ local function allowed(player, owner, target, distance)
 	return true
 end
 
+-- Only identifiers are accepted. Prices, selected seed, unlocks and rewards stay server-owned.
+actionRequest.OnServerEvent:Connect(function(player, action, cropId)
+	if type(action) ~= "string" or (action ~= "Buy" and action ~= "Select") then return end
+	if type(cropId) ~= "string" or not Config.Crops[cropId] then return end
+	local session = sessions[player]
+	if not session then return end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local target = action == "Buy" and session.world.shop or root
+	if not allowed(player, player, target, Config.ShopDistance) then return end
+	local ok, message
+	if action == "Buy" then ok, message = session.state:buy(cropId) else ok, message = session.state:select(cropId) end
+	if ok and action == "Buy" then message = "+1 " .. cropId .. " Seed • Selected for planting" end
+	publish(player, session, message, ok and { kind = action, position = target.Position, cropId = cropId } or nil)
+end)
+
 local function prompt(part, action, callback)
 	local interaction = Instance.new("ProximityPrompt")
-	interaction.ActionText, interaction.ObjectText = action, part.Name == "SeedShop" and "Tomato Seeds" or "Harvest Basket"
+	interaction.ActionText, interaction.ObjectText = action, part.Name == "SeedShop" and "Seed Shop" or "Harvest Basket"
 	interaction.MaxActivationDistance = 12
 	interaction.RequiresLineOfSight = false
 	interaction.HoldDuration = 0
@@ -73,17 +106,20 @@ local function join(player)
 	local session = { state = state, world = world, slot = slot, lastAction = -math.huge }
 	sessions[player] = session
 	publish(player, session, "Welcome! Buy a Tomato Seed at the green shop.")
-	prompt(world.shop, "Buy seed • " .. Config.Crops.Tomato.SeedPrice .. " Coins", function(visitor)
+	prompt(world.shop, "Browse seeds", function(visitor)
 		if not allowed(visitor, player, world.shop, Config.ShopDistance) then return end
-		local ok, message = state:buy("Tomato")
-		publish(player, session, ok and "+1 Tomato Seed" or message, ok and { kind = "Buy", position = world.shop.Position } or nil)
+		feedback:FireClient(player, { kind = "Shop" })
 	end)
-	prompt(world.sell, "Sell all Tomatoes", function(visitor)
+	prompt(world.sell, "Sell all crops", function(visitor)
 		if not allowed(visitor, player, world.sell, Config.ShopDistance) then return end
 		local before = state.coins
-		local ok, message = state:sell()
+		local ok, message, unlocks = state:sell()
 		local earned = state.coins - before
-		publish(player, session, ok and ("+" .. earned .. " Coins • Harvest sold!") or message, ok and { kind = "Sell", position = world.sell.Position, amount = earned } or nil)
+		if ok then
+			message = "+" .. earned .. " Coins • Harvest sold!"
+			if #unlocks > 0 then message ..= "\nUNLOCKED: " .. table.concat(unlocks, ", ") .. "!" end
+		end
+		publish(player, session, message, ok and { kind = "Sell", position = world.sell.Position, amount = earned, unlocks = unlocks } or nil)
 	end)
 	for index, view in ipairs(world.plots) do
 		local click = Instance.new("ClickDetector")
@@ -91,17 +127,21 @@ local function join(player)
 		click.Parent = view.soil
 		click.MouseClick:Connect(function(visitor)
 			if not allowed(visitor, player, view.soil, Config.InteractionDistance) then return end
-			local ok, message
+			local ok, message, newDiscovery
 			local action = state.plots[index].stage == 0 and "Plant" or "Harvest"
 			local mutation = state.plots[index].mutation
+			local cropId = state.plots[index].cropId or state.selectedCrop
 			if state.plots[index].stage == 0 then
-				ok, message = state:plant(index, "Tomato", os.clock())
+				ok, message = state:plant(index, state.selectedCrop, os.clock())
 			else
-				ok, message = state:harvest(index)
+				ok, message, newDiscovery = state:harvest(index)
 			end
 			if ok then World.render(view, state.plots[index], Config) end
-			if ok then message = action == "Plant" and "Seed planted • Watch it grow!" or ("+1 " .. mutation .. " Tomato") end
-			publish(player, session, message, ok and { kind = action, position = view.soil.Position, mutation = mutation } or nil)
+			if ok then
+				message = action == "Plant" and (cropId .. " planted • Watch it grow!") or ("+1 " .. mutation .. " " .. cropId)
+				if newDiscovery then message = "NEW DISCOVERY!\n+1 " .. mutation .. " " .. cropId end
+			end
+			publish(player, session, message, ok and { kind = action, position = view.soil.Position, mutation = mutation, cropId = cropId, discovery = newDiscovery } or nil)
 		end)
 	end
 	local function spawn(character)
@@ -134,9 +174,9 @@ while true do
 		for _, index in ipairs(session.state:advance(now, function(low, high) return random:NextInteger(low, high) end)) do
 			local plot = session.state.plots[index]
 			World.render(session.world.plots[index], plot, Config)
-			if plot.stage == 4 then
-				local message = plot.mutation == "Normal" and "TOMATO READY!" or (string.upper(plot.mutation) .. " MUTATION!")
-				publish(player, session, message, { kind = "Ready", mutation = plot.mutation, position = session.world.plots[index].soil.Position })
+			if plot.stage == #Config.Crops[plot.cropId].GrowthStages then
+				local message = plot.mutation == "Normal" and (string.upper(plot.cropId) .. " READY!") or (string.upper(plot.mutation) .. " " .. string.upper(plot.cropId) .. "!")
+				publish(player, session, message, { kind = "Ready", mutation = plot.mutation, cropId = plot.cropId, position = session.world.plots[index].soil.Position })
 			end
 		end
 		for index, plot in ipairs(session.state.plots) do

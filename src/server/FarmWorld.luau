@@ -109,8 +109,8 @@ function World.create(parent, player, slot, config)
 	end
 	decoration(model, "HayBale", Vector3.new(4, 2.5, 3), origin + Vector3.new(-25, 2.25, -25), Color3.fromRGB(217, 180, 91), Enum.Material.Grass)
 	decoration(model, "WaterBarrel", Vector3.new(3, 3, 3), origin + Vector3.new(25, 2.5, -25), Color3.fromRGB(90, 126, 138), Enum.Material.WoodPlanks)
-	local shop = kiosk(model, origin + Vector3.new(-21, 1, 17), "SeedShop", Color3.fromRGB(49, 136, 94), "1  SEED SHOP\nTomato Seed • " .. config.Crops.Tomato.SeedPrice .. " Coins")
-	local sell = kiosk(model, origin + Vector3.new(21, 1, 17), "SellStand", Color3.fromRGB(220, 143, 58), "4  SELL HARVEST\nTomatoes → Coins")
+	local shop = kiosk(model, origin + Vector3.new(-21, 1, 17), "SeedShop", Color3.fromRGB(49, 136, 94), "1  SEED SHOP\nBrowse • Buy • Unlock")
+	local sell = kiosk(model, origin + Vector3.new(21, 1, 17), "SellStand", Color3.fromRGB(220, 143, 58), "4  SELL HARVEST\nCrops → Coins → Unlocks")
 	local gardenSign = decoration(model, "GardenGuide", Vector3.new(0.3, 2, 0.3), origin + Vector3.new(0, 2, 5), cream, Enum.Material.Wood)
 	World.label(gardenSign, "2  PLANT  →  3  HARVEST\nClick / tap the soil", 2, 220, 48)
 	local plots = {}
@@ -135,10 +135,11 @@ function World.render(view, plot, config)
 end
 
 function World.countdown(view, plot, config, now)
-	if plot.stage == 0 or plot.stage == 4 then return end
-	if view.visualPhase == "SEED" and now - plot.plantedAt >= 1.3 then World.render(view, plot, config) end
-	local seconds = math.max(0, math.ceil(config.Crops[plot.cropId].GrowSeconds - (now - plot.plantedAt)))
-	local text = (view.visualPhase or "GROWING") .. " • " .. seconds .. "s"
+	local crop = config.Crops[plot.cropId]
+	if not crop or plot.stage == 0 or plot.stage == #crop.GrowthStages then return end
+	if view.visualPhase == "SEED" and now - plot.plantedAt >= crop.SeedSeconds then World.render(view, plot, config) end
+	local seconds = math.max(0, math.ceil(crop.GrowSeconds - (now - plot.plantedAt)))
+	local text = plot.cropId .. " • " .. (view.visualPhase or "GROWING") .. "\n" .. seconds .. "s"
 	if view.label.Text ~= text then view.label.Text = text end
 end
 

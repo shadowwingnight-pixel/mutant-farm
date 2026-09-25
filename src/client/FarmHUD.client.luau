@@ -3,11 +3,13 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Effects = require(script.Parent.FarmEffects)
+local FarmPanels = require(script.Parent.FarmPanels)
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name, gui.ResetOnSpawn = "MutantFarmHUD", false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
+local panels = FarmPanels.create(gui, player, Config, ReplicatedStorage:WaitForChild("FarmAction"))
 local cream = Color3.fromRGB(255, 243, 214)
 local dark = Color3.fromRGB(24, 45, 38)
 
@@ -33,9 +35,18 @@ panel.Size, panel.BackgroundColor3 = UDim2.new(0.94, 0, 0, 143), dark
 panel.BackgroundTransparency, panel.Parent = 0.04, gui
 round(panel, 14)
 constrain(panel, 600, 143)
-label(panel, "MUTANT FARM", UDim2.fromOffset(12, 7), UDim2.new(1, -24, 0, 21), 18)
+local titleLabel = label(panel, "MUTANT FARM", UDim2.fromOffset(9, 7), UDim2.new(0.48, 0, 0, 21), 17)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+for index, info in ipairs({ { "Seeds", panels.openSeeds }, { "Book", panels.openBook } }) do
+	local button = Instance.new("TextButton")
+	button.Position, button.Size = UDim2.new(0.5 + (index - 1) * 0.25, 0, 0, 5), UDim2.new(0.25, -7, 0, 25)
+	button.Text, button.Font, button.TextSize = info[1], Enum.Font.GothamBold, 13
+	button.TextColor3, button.BackgroundColor3, button.Parent = cream, Color3.fromRGB(60, 106, 74), panel
+	round(button, 7)
+	button.Activated:Connect(info[2])
+end
 local cards = {}
-for index, info in ipairs({ {"Coins", "Coins", Color3.fromRGB(255, 212, 95)}, {"TomatoSeeds", "Tomato Seeds", Color3.fromRGB(167, 232, 136)}, {"Tomatoes", "Tomatoes", Color3.fromRGB(255, 146, 124)} }) do
+for index, info in ipairs({ {"Coins", "Coins", Color3.fromRGB(255, 212, 95)}, {"SeedCount", "Seeds", Color3.fromRGB(167, 232, 136)}, {"HarvestCount", "Harvest", Color3.fromRGB(255, 146, 124)} }) do
 	local card = Instance.new("Frame")
 	card.Position, card.Size = UDim2.new((index - 1) / 3, 7, 0, 33), UDim2.new(1 / 3, -14, 0, 54)
 	card.BackgroundColor3, card.Parent = Color3.fromRGB(39, 64, 52), panel
@@ -53,6 +64,7 @@ local guide = label(panel, "BUY → PLANT → HARVEST → SELL", UDim2.fromOffse
 local toast = label(gui, "", UDim2.new(0.5, 0, 1, -94), UDim2.new(0.86, 0, 0, 48), 17)
 toast.AnchorPoint, toast.BackgroundColor3, toast.BackgroundTransparency = Vector2.new(0.5, 0), dark, 0.06
 toast.Visible = false
+toast.ZIndex = 30
 round(toast, 12)
 constrain(toast, 540, 48)
 local toastScale = Instance.new("UIScale", toast)
@@ -60,6 +72,7 @@ local reveal = Instance.new("Frame")
 reveal.AnchorPoint, reveal.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 154)
 reveal.Size, reveal.BackgroundColor3, reveal.BackgroundTransparency = UDim2.new(0.88, 0, 0, 73), Color3.fromRGB(56, 29, 87), 0.08
 reveal.Visible, reveal.Parent = false, gui
+reveal.ZIndex = 20
 round(reveal, 14)
 constrain(reveal, 500, 73)
 local border = Instance.new("UIStroke", reveal)
@@ -88,6 +101,8 @@ local function cosmicReveal(preview)
 end
 local toastVersion = 0
 local function message(payload)
+	if payload.kind == "Shop" then panels.openSeeds(); return end
+	if payload.kind == "Select" then panels.close() end
 	Effects.burst(payload)
 	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
 		-- Several crops can mature together: one brief reveal, never a flashing stack.
@@ -118,7 +133,7 @@ local function refreshTarget()
 		for _, item in ipairs(farm:GetChildren()) do
 			if item:IsA("BasePart") and string.sub(item.Name, 1, 5) == "Soil_" then
 				local stage = item:GetAttribute("GrowthStage") or 0
-				if stage == 4 or (stage == 0 and (player:GetAttribute("Ready") or 0) == 0) then target = item; break end
+				if item:GetAttribute("Ready") or (stage == 0 and (player:GetAttribute("Ready") or 0) == 0) then target = item; break end
 			end
 		end
 	end
@@ -135,13 +150,16 @@ local function update()
 		end
 		card.value = value
 	end
-	basket.Text = amount("Tomatoes") > 0 and ("Basket value: " .. amount("HarvestValue") .. " Coins • Sell at the orange stall") or "Every Tomato can mutate • 15 seconds to grow"
+	local selected = player:GetAttribute("SelectedCrop") or Config.CropOrder[1]
+	basket.Text = amount("HarvestCount") > 0 and ("Basket: " .. amount("HarvestValue") .. " Coins • Discoveries: " .. amount("DiscoveryCount") .. "/15") or ("Selected: " .. selected .. " (" .. amount("Seeds_" .. selected) .. ") • Book: " .. amount("DiscoveryCount") .. "/15")
 	if amount("Ready") > 0 then
 		guide.Text, targetName = "3  HARVEST • Click / tap READY soil", "Soil"
-	elseif amount("Tomatoes") > 0 then
+	elseif amount("HarvestCount") > 0 then
 		guide.Text, targetName = "4  SELL • Orange stall → E / tap", "SellStand"
-	elseif amount("TomatoSeeds") > 0 and amount("Growing") < Config.PlotCount then
-		guide.Text, targetName = "2  PLANT • Click / tap an empty soil plot", "Soil"
+	elseif amount("Seeds_" .. selected) > 0 and amount("Growing") < Config.PlotCount then
+		guide.Text, targetName = "2  PLANT " .. selected .. " • Click empty soil", "Soil"
+	elseif amount("SeedCount") > 0 and amount("Growing") < Config.PlotCount then
+		guide.Text, targetName = "Choose a seed to plant using Seeds above", ""
 	elseif amount("Growing") > 0 then
 		guide.Text, targetName = "GROWING • Watch for READY, then harvest", ""
 	else
@@ -149,7 +167,12 @@ local function update()
 	end
 	refreshTarget()
 end
-player.AttributeChanged:Connect(update)
+local updateQueued = false
+player.AttributeChanged:Connect(function()
+	if updateQueued then return end
+	updateQueued = true
+	task.defer(function() updateQueued = false; update() end)
+end)
 ReplicatedStorage:WaitForChild("FarmFeedback").OnClientEvent:Connect(message)
 update()
 message({ kind = "Notice", text = "Start at the green Seed Shop • Follow the highlighted stall" })
