@@ -1,8 +1,10 @@
 # Milestone 5 — Living World
 
-Status: **implemented; Studio acceptance pending**. Baseline `612c836` preserves
-validated Milestones 1–4. Milestone 5 commits are local only. No experience was
-published/updated. Milestone 6 has not started.
+Status: **manual Studio acceptance PASSED**, confirmed by the project owner.
+Day/night, Clear, Rain, Thunderstorm, Meteor Shower, HUD, environmental mutation
+modifiers, farming during environmental states, event cleanup and existing gameplay
+all passed. The owner authorized pushing Milestone 5. This task did not publish/update
+the experience. Milestone 6 has not started.
 
 ## Behavior and balance
 
@@ -188,6 +190,7 @@ QA holds/resume, and once-only maturity rolls/rewards across all crops.
 **Standalone Luau compilation and all Luau test suites remain unexecuted:** runner
 not installed. Existing gameplay/persistence tests are retained. When official tools
 are available, `tests/validate.ps1 -LuauDirectory PATH` runs all three suites.
-Rojo does not compile Luau; no Studio runtime or gameplay validation is claimed.
+Rojo does not compile Luau. Studio runtime/gameplay acceptance was performed and
+confirmed by the project owner, not by the coding agent.
 
 Next milestone: Mutant Farm Town / open-world foundation. Do not start until requested.

@@ -16,10 +16,11 @@ memory; cloud testing requires an explicit isolated test slot. Follow the
 [Milestone 4 safe test instructions](docs/MILESTONE4.md) before enabling cloud tests.
 Growing crops reset on leaving; harvest before leaving to retain their value.
 
-**Milestone 5 implemented; Studio validation pending.** Shared day/evening/night,
+**Milestone 5 validated by the project owner in Roblox Studio.** Shared day/evening/night,
 Clear/Rain/Thunderstorm and temporary Meteor Showers influence server mutation
 weights at maturity. See [Living World QA commands and balance](docs/MILESTONE5.md).
-Milestone 5 commits remain local; nothing has been published or pushed for this milestone.
+The owner confirmed all Living World acceptance checks passed and authorized pushing
+Milestone 5. Milestone 6 has not started.
 
 ## Source layout
 
