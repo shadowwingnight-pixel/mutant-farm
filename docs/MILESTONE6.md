@@ -1,6 +1,8 @@
 # Milestone 6 — Mutant Farm Town
 
 Status: **implemented; owner Studio visual/gameplay acceptance pending**.
+Update: the owner confirmed the M6A foundation loads and works after restarting and
+reconnecting Rojo. The additive [M6B polish pass](MILESTONE6B.md) awaits visual validation.
 Validated baseline: `02da144d6bffb39619982b56e832ae1679b83b92`.
 Local commits only; no push, experience publication/update or Milestone 7 work.
 
