@@ -19,8 +19,14 @@ Growing crops reset on leaving; harvest before leaving to retain their value.
 **Milestone 5 validated by the project owner in Roblox Studio.** Shared day/evening/night,
 Clear/Rain/Thunderstorm and temporary Meteor Showers influence server mutation
 weights at maturity. See [Living World QA commands and balance](docs/MILESTONE5.md).
-The owner confirmed all Living World acceptance checks passed and authorized pushing
-Milestone 5. Milestone 6 has not started.
+The owner confirmed all Living World acceptance checks passed. Milestones 1–5 are validated and pushed.
+
+**Milestone 6 implemented; Studio visual/gameplay validation pending.** A shared
+compact town west of the existing farms adds Seed Square, a seed store, produce
+market, research-lab exterior, grove, river and bridge. Follow the road left from
+your farm entrance. Town counters use the same inventory/economy as farm counters.
+See [town layout and exact acceptance walkthrough](docs/MILESTONE6.md).
+Milestone 6 remains local and has not been pushed or published.
 
 ## Source layout
 
@@ -98,6 +104,8 @@ Milestones 1–4 are validated; the owner approved pushing the Milestone 4 check
   Strawberry 22 and Pumpkin 32. Prices, stages, visuals and unlocks are in Config.
 - READY soil: click/tap to harvest into your basket.
 - Orange stand: press E or tap the prompt to sell the entire basket.
+- Town Seed Store and Produce Market: the same E/tap interactions, inventory and
+  prices as your farm counters. Follow the nearest highlighted shop/sell target.
 - Blue farm expansion board: press E or tap; buy nine plots for 500 Coins,
   then twelve for another 1,500 Coins. Each upgrade adds a row and extends the land.
 - HUD shows Coins, total seeds, total harvested crops, selected crop and next action.

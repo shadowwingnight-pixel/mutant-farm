@@ -153,12 +153,16 @@ function Town:connectFarm(farm, player, slot)
 	local row = math.floor((slot - 1) / 4)
 	if not self.rows[row] then
 		self.rows[row] = {
+			ground = world.part(self.routes, "DistrictGrass", V(1, 2, 120), V(0, 3.8, origin.Z - 4), Color3.fromRGB(89, 162, 104), Enum.Material.Grass),
 			land = world.part(self.routes, "FarmLane", V(1, 2, 12), V(0, 4, origin.Z + 44), Color3.fromRGB(101, 176, 115), Enum.Material.Grass),
 			path = world.part(self.routes, "FarmLanePath", V(1, 0.16, 9), V(0, 5.1, origin.Z + 44), pathColor, Enum.Material.Sand), maxX = -44,
 		}
 	end
 	local lane = self.rows[row]
 	lane.maxX = math.max(lane.maxX, origin.X + 8)
+	-- A shallow grass foundation closes gaps between occupied farm lots/rows.
+	-- It stays below original farm surfaces and leaves all plot coordinates intact.
+	lane.ground.Size, lane.ground.Position = V(lane.maxX + 80, 2, 120), V((lane.maxX - 20) / 2, 3.8, origin.Z - 4)
 	lane.land.Size, lane.land.Position = V(lane.maxX + 44, 2, 12), V((lane.maxX - 44) / 2, 4, origin.Z + 44)
 	lane.path.Size, lane.path.Position = V(lane.maxX + 44, 0.16, 9), V((lane.maxX - 44) / 2, 5.1, origin.Z + 44)
 	self.maxRow = math.max(self.maxRow, row)
