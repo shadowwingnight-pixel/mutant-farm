@@ -25,6 +25,8 @@ function View.start(gui, conditionLabel, config)
 	local rainFolder, meteorFolder = Instance.new("Folder"), Instance.new("Folder")
 	rainFolder.Name, rainFolder.Parent = "Rain", folder
 	meteorFolder.Name, meteorFolder.Parent = "Meteors", folder
+	local boltFolder = Instance.new("Folder")
+	boltFolder.Name, boltFolder.Parent = "Lightning", folder
 	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	local ownsAtmosphere = atmosphere == nil
 	if not atmosphere then atmosphere = Instance.new("Atmosphere"); atmosphere.Parent = Lighting end
@@ -51,7 +53,7 @@ function View.start(gui, conditionLabel, config)
 	banner.Size = UDim2.new(0.9, 0, 0, 56)
 	banner.BackgroundColor3, banner.BackgroundTransparency = Color3.fromRGB(46, 32, 71), 0.1
 	banner.TextColor3, banner.TextSize, banner.Font = Color3.fromRGB(211, 229, 255), 16, Enum.Font.GothamBold
-	banner.TextWrapped, banner.Visible, banner.ZIndex, banner.Parent = true, false, 6, gui
+	banner.TextWrapped, banner.Visible, banner.ZIndex, banner.Parent = true, false, 25, gui
 	local corner = Instance.new("UICorner", banner)
 	corner.CornerRadius = UDim.new(0, 12)
 	local limit = Instance.new("UISizeConstraint", banner)
@@ -105,6 +107,7 @@ function View.start(gui, conditionLabel, config)
 			end
 			if data.weather ~= "Thunderstorm" then
 				tween(flash, { Brightness = 0 }, 0)
+				boltFolder:ClearAllChildren()
 				if thunder then thunder:Stop() end
 			end
 		end
@@ -115,6 +118,19 @@ function View.start(gui, conditionLabel, config)
 	table.insert(connections, lightning.OnClientEvent:Connect(function()
 		if not current or current.weather ~= "Thunderstorm" then return end
 		-- One soft pulse, no rapid strobe, camera shake or obstruction.
+		local camera = workspace.CurrentCamera
+		boltFolder:ClearAllChildren()
+		if camera then
+			local forward = camera.CFrame.LookVector
+			local top = camera.CFrame.Position + Vector3.new(forward.X * 65, 38, forward.Z * 65)
+			for index = 1, 3 do
+				local bottom = top + Vector3.new(index % 2 == 0 and -6 or 6, -9, 0)
+				local bolt = part(boltFolder, "LightningBolt", Vector3.new(0.2, 0.2, (bottom - top).Magnitude), Color3.fromRGB(213, 223, 255))
+				bolt.CFrame = CFrame.lookAt((top + bottom) / 2, bottom)
+				Debris:AddItem(bolt, 0.3)
+				top = bottom
+			end
+		end
 		tween(flash, { Brightness = 0.12 }, 0)
 		tween(flash, { Brightness = 0 }, 0.65)
 		if thunder then thunder:Play() end

@@ -16,6 +16,11 @@ memory; cloud testing requires an explicit isolated test slot. Follow the
 [Milestone 4 safe test instructions](docs/MILESTONE4.md) before enabling cloud tests.
 Growing crops reset on leaving; harvest before leaving to retain their value.
 
+**Milestone 5 implemented; Studio validation pending.** Shared day/evening/night,
+Clear/Rain/Thunderstorm and temporary Meteor Showers influence server mutation
+weights at maturity. See [Living World QA commands and balance](docs/MILESTONE5.md).
+Milestone 5 commits remain local; nothing has been published or pushed for this milestone.
+
 ## Source layout
 
 | Directory | Roblox Studio destination |
@@ -110,6 +115,9 @@ Milestones 1–4 are validated; the owner approved pushing the Milestone 4 check
 | Giant | 10% | 2x | 36 |
 | Crystal | 1.9% | 6x | 108 |
 | Cosmic | 0.1% | 20x | 360 |
+
+These are Clear/Day baseline odds. Environmental modifiers change normalized
+chances at maturity, never crop values or mutation sell multipliers.
 
 Balance lives in `src/shared/Config.luau`. Only the server reads authoritative
 state, spends seeds/Coins, rolls mutations and grants rewards. Player attributes
