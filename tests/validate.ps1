@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 10) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 13) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, ten modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, thirteen modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -62,6 +62,18 @@ try {
         throw 'Missing persistence separation, ownership, shutdown or expansion guard.'
     }
     Write-Output 'PASS static persistence boundaries and expansion request guard (not a runtime test).'
+    $environmentSource = Get-Content -Raw src/server/EnvironmentService.luau
+    if (([regex]::Matches($environmentSource, [regex]::Escape($studioGuard))).Count -ne 2 -or
+        -not $environmentSource.Contains('command.Parent = ServerStorage') -or
+        $environmentSource.Contains('OnServerEvent') -or
+        -not $mainSource.Contains('environment.currentWeights') -or
+        -not $mainSource.Contains('environment:step()') -or
+        $serverModules -notcontains 'EnvironmentState' -or
+        $serverModules -notcontains 'EnvironmentService' -or
+        $clientModules -notcontains 'EnvironmentView') {
+        throw 'Environment authority, Studio control or maturity integration boundary missing.'
+    }
+    Write-Output 'PASS static environment authority and Studio controls (not a runtime test).'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
@@ -73,6 +85,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Gameplay-state tests failed.' }
         & $runner tests/Persistence.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Persistence tests failed.' }
+        & $runner tests/Environment.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Environment tests failed.' }
     } else {
         Write-Output 'SKIP Luau compilation/state tests: pass -LuauDirectory with official standalone tools.'
     }

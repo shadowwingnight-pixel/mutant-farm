@@ -5,6 +5,7 @@ local FarmState = require(script.Parent.FarmState)
 local World = require(script.Parent.FarmWorld)
 local Persistence = require(script.Parent.Persistence)
 local persistence = Persistence.new(Config)
+local environment = require(script.Parent.EnvironmentService).new(Config)
 
 local farms = Instance.new("Folder")
 farms.Name, farms.Parent = "MutantFarms", workspace
@@ -247,6 +248,7 @@ require(script.Parent.StudioPreview).install(Config, World, feedback, sessions)
 
 while true do
 	task.wait(0.25)
+	environment:step()
 	local now = os.clock()
 	for player, session in pairs(sessions) do
 		if not persistence:canPlay(session.profile) then
@@ -260,7 +262,7 @@ while true do
 				if not saved and sessions[player] == session then session.nextSave = os.clock() + 15 end
 			end)
 		end
-		for _, index in ipairs(session.state:advance(now, function(low, high) return random:NextInteger(low, high) end)) do
+		for _, index in ipairs(session.state:advance(now, function(low, high) return random:NextInteger(low, high) end, environment.currentWeights)) do
 			local plot = session.state.plots[index]
 			World.render(session.world.plots[index], plot, Config)
 			if plot.stage == #Config.Crops[plot.cropId].GrowthStages then

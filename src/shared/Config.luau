@@ -10,6 +10,31 @@ return {
 	InteractionDistance = 24,
 	ShopDistance = 14,
 	ActionCooldown = 0.2,
+	Environment = {
+		TransitionSeconds = 5,
+		Phases = {
+			{ Id = "Day", Seconds = 120, Clock = 12, Brightness = 2.2, Ambient = { 125, 135, 145 } },
+			{ Id = "Evening", Seconds = 40, Clock = 18, Brightness = 1.4, Ambient = { 130, 105, 115 } },
+			{ Id = "Night", Seconds = 80, Clock = 0, Brightness = 0.8, Ambient = { 85, 95, 130 } },
+		},
+		WeatherSeconds = 90,
+		Weather = {
+			{ Id = "Clear", Weight = 60, Brightness = 1, Density = 0.22, Color = { 195, 218, 245 }, Rain = 0 },
+			{ Id = "Rain", Weight = 30, Brightness = 0.8, Density = 0.35, Color = { 155, 176, 195 }, Rain = 24 },
+			{ Id = "Thunderstorm", Weight = 10, Brightness = 0.55, Density = 0.45, Color = { 110, 125, 155 }, Rain = 40 },
+		},
+		-- Multipliers affect weights, not final percentages. Normal always keeps its baseline weight.
+		Modifiers = {
+			Rain = { Golden = 1.1, Giant = 1.1, Crystal = 1.3, Cosmic = 1.4 },
+			Thunderstorm = { Golden = 1.2, Giant = 1.2, Crystal = 1.7, Cosmic = 2 },
+			Night = { Golden = 1.05, Giant = 1.05, Crystal = 1.15, Cosmic = 1.2 },
+			Meteor = { Golden = 1.15, Giant = 1.15, Crystal = 1.8, Cosmic = 3 },
+		},
+		Meteor = { CheckSeconds = 120, Chance = 0.12, Duration = 45, Cooldown = 240 },
+		LightningSeconds = { 10, 18 },
+		Visuals = { TickSeconds = 0.05, RainRadius = 26, RainHeight = 28, RainSpeed = 48,
+			MeteorInterval = 0.7, MeteorLife = 1.4, MaxMeteors = 3, ThunderSoundId = "" },
+	},
 	CropOrder = { "Tomato", "Strawberry", "Pumpkin" },
 	Crops = {
 		Tomato = {

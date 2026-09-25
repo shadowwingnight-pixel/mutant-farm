@@ -31,10 +31,10 @@ local function constrain(object, width, height)
 end
 local panel = Instance.new("Frame")
 panel.AnchorPoint, panel.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8)
-panel.Size, panel.BackgroundColor3 = UDim2.new(0.94, 0, 0, 143), dark
+panel.Size, panel.BackgroundColor3 = UDim2.new(0.94, 0, 0, 168), dark
 panel.BackgroundTransparency, panel.Parent = 0.04, gui
 round(panel, 14)
-constrain(panel, 600, 143)
+constrain(panel, 600, 168)
 local titleLabel = label(panel, "MUTANT FARM", UDim2.fromOffset(9, 7), UDim2.new(0.48, 0, 0, 21), 17)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 for index, info in ipairs({ { "Seeds", panels.openSeeds }, { "Book", panels.openBook } }) do
@@ -65,6 +65,7 @@ saveStatus.AnchorPoint = Vector2.new(0.5, 0)
 saveStatus.BackgroundColor3, saveStatus.BackgroundTransparency = dark, 0.2
 constrain(saveStatus, 600, 23)
 round(saveStatus, 6)
+local conditions = label(panel, "DAY • CLEAR", UDim2.fromOffset(8, 143), UDim2.new(1, -16, 0, 20), 12, Color3.fromRGB(188, 213, 245))
 
 local toast = label(gui, "", UDim2.new(0.5, 0, 1, -94), UDim2.new(0.86, 0, 0, 48), 17)
 toast.AnchorPoint, toast.BackgroundColor3, toast.BackgroundTransparency = Vector2.new(0.5, 0), dark, 0.06
@@ -74,7 +75,7 @@ round(toast, 12)
 constrain(toast, 540, 48)
 local toastScale = Instance.new("UIScale", toast)
 local reveal = Instance.new("Frame")
-reveal.AnchorPoint, reveal.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 154)
+reveal.AnchorPoint, reveal.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 185)
 reveal.Size, reveal.BackgroundColor3, reveal.BackgroundTransparency = UDim2.new(0.88, 0, 0, 73), Color3.fromRGB(56, 29, 87), 0.08
 reveal.Visible, reveal.Parent = false, gui
 reveal.ZIndex = 20
@@ -196,5 +197,6 @@ ReplicatedStorage:WaitForChild("FarmFeedback").OnClientEvent:Connect(message)
 update()
 message({ kind = "Notice", text = "Start at the green Seed Shop • Follow the highlighted stall" })
 Effects.startOrbits()
+task.spawn(function() require(script.Parent.EnvironmentView).start(gui, conditions, Config) end)
 -- Retry streamed/late-replicated world targets without per-frame scene searches.
 task.spawn(function() while gui.Parent do task.wait(0.5); refreshTarget(); panels.refresh() end end)

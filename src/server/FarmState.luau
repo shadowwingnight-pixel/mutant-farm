@@ -85,7 +85,8 @@ function FarmState:plant(index, cropId, now)
 	return true, cropId .. " planted!"
 end
 
-function FarmState:advance(now, randomInteger)
+function FarmState:advance(now, randomInteger, mutationWeights)
+	local mutations = mutationWeights or self.config.Mutations
 	local changed = {}
 	for index, plot in ipairs(self.plots) do
 		local crop = self.config.Crops[plot.cropId]
@@ -98,9 +99,9 @@ function FarmState:advance(now, randomInteger)
 				plot.stage = stage
 				if stage == #crop.GrowthStages then
 					local total = 0
-					for _, mutation in ipairs(self.config.Mutations) do total += mutation.Weight end
+					for _, mutation in ipairs(mutations) do total += mutation.Weight end
 					local roll = randomInteger(1, total)
-					for _, mutation in ipairs(self.config.Mutations) do
+					for _, mutation in ipairs(mutations) do
 						roll -= mutation.Weight
 						if roll <= 0 then plot.mutation = mutation.Id; break end
 					end
