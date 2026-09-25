@@ -12,11 +12,11 @@ try {
     $scripts = @($place.SelectNodes('//Item[@class="Script"]'))
     $clients = @($place.SelectNodes('//Item[@class="LocalScript"]'))
     $modules = @($place.SelectNodes('//Item[@class="ModuleScript"]'))
-    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 22) {
+    if ($scripts.Count -ne 1 -or $clients.Count -ne 1 -or $modules.Count -ne 24) {
         throw 'Unexpected script layout in built place.'
     }
     if ((Get-Content -Raw build/mutant-farm.rbxlx).Contains('ROJO_SYNC_TEST')) { throw 'Old sync test remains.' }
-    Write-Output 'PASS Rojo build: one server, one client, twenty-two modules; no sync test.'
+    Write-Output 'PASS Rojo build: one server, one client, twenty-four modules; no sync test.'
     $serverModules = @($place.SelectNodes('//Item[@class="ServerScriptService"]//Item[@class="ModuleScript"]/Properties/string[@name="Name"]') | ForEach-Object InnerText)
     if ($serverModules -notcontains 'StudioPreview' -or $serverModules -notcontains 'CropVisuals') {
         throw 'Expected server-only preview and crop renderer modules.'
@@ -116,6 +116,15 @@ try {
         -not $mainSource.Contains('TownNPCs.dialogue(definition, session.state, environment.state:snapshot())') -or
         $clientModules -notcontains 'TownDialogue') { throw 'NPC authority/UI boundary missing.' }
     Write-Output 'PASS static NPC authority and dialogue placement (not runtime validation).'
+    $researchSource = Get-Content -Raw src/server/ResearchService.luau
+    if ($serverModules -notcontains 'ResearchService' -or $clientModules -notcontains 'ResearchPanel' -or
+        $clientModules -contains 'ResearchService' -or
+        -not $researchSource.Contains('allowed(player,player,action == "Cross" and bench or root,12)') -or
+        -not $researchSource.Contains('token ~= session.researchToken') -or
+        -not $researchSource.Contains('session.researchToken = nil') -or
+        -not $researchSource.Contains('command.Parent = game:GetService("ServerStorage")') -or
+        ([regex]::Matches($researchSource,[regex]::Escape($studioGuard))).Count -ne 2) { throw 'Research authority, ticket or Studio guard missing.' }
+    Write-Output 'PASS static research authority, single-use ticket and Studio QA boundaries.'
     if ($LuauDirectory) {
         $compiler = Join-Path $LuauDirectory 'luau-compile.exe'
         $runner = Join-Path $LuauDirectory 'luau.exe'
@@ -131,6 +140,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Environment tests failed.' }
         & $runner tests/Objectives.spec.luau
         if ($LASTEXITCODE -ne 0) { throw 'Objective tests failed.' }
+        & $runner tests/Research.spec.luau
+        if ($LASTEXITCODE -ne 0) { throw 'Research tests failed.' }
     } else {
         Write-Output 'SKIP Luau compilation/state tests: pass -LuauDirectory with official standalone tools.'
     }

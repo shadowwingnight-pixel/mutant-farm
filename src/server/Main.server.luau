@@ -31,6 +31,17 @@ local function publish(player, session, message, effect)
 	player:SetAttribute("HarvestCount", count)
 	player:SetAttribute("EarnedCoins", session.state.earnedCoins)
 	player:SetAttribute("SelectedCrop", session.state.selectedCrop)
+	player:SetAttribute("SelectedExperiment", session.state.selectedExperiment)
+	player:SetAttribute("ResearchCount", session.state.researchCount)
+	local experimentalCount = 0
+	for _, id in ipairs(Config.Research.Order) do
+		local amount = session.state.experimentalSeeds[id]
+		experimentalCount += amount
+		player:SetAttribute("ExpSeed_" .. id, amount)
+		for _, mutation in ipairs(Config.Mutations) do player:SetAttribute("ExpBag_" .. id .. "_" .. mutation.Id,session.state.experimentalBag[id][mutation.Id] or 0) end
+	end
+	for key in pairs(Config.Research.Discoveries) do player:SetAttribute("Research_" .. key,session.state.researchFound[key] == true) end
+	player:SetAttribute("ExperimentalSeedCount",experimentalCount)
 	player:SetAttribute("HarvestValue", value)
 	local growing, ready = 0, 0
 	for _, plot in ipairs(session.state.plots) do
@@ -53,7 +64,7 @@ local function publish(player, session, message, effect)
 			player:SetAttribute("Bag_" .. cropId .. "_" .. mutation.Id, session.state.bag[cropId][mutation.Id] or 0)
 		end
 	end
-	player:SetAttribute("SeedCount", seeds)
+	player:SetAttribute("SeedCount", seeds + experimentalCount)
 	player:SetAttribute("DiscoveryCount", discoveries)
 	if message then
 		player:SetAttribute("FarmMessage", message)
@@ -97,6 +108,7 @@ TownNPCs.build(town, function(player, definition, target)
 	publish(player, session)
 	feedback:FireClient(player, TownNPCs.dialogue(definition, session.state, environment.state:snapshot()))
 end)
+require(script.Parent.ResearchService).install(Config,World,town,sessions,allowed,publish,feedback)
 -- Only identifiers are accepted. Prices, selected seed, unlocks and rewards stay server-owned.
 actionRequest.OnServerEvent:Connect(function(player, action, cropId)
 	if action == "Expand" then
@@ -222,6 +234,7 @@ bindPlots = function(player, session)
 			local action = state.plots[index].stage == 0 and "Plant" or "Harvest"
 			local mutation = state.plots[index].mutation
 			local cropId = state.plots[index].cropId or state.selectedCrop
+			local experimentId = action == "Plant" and state.selectedExperiment or state.plots[index].experiment
 			if state.plots[index].stage == 0 then
 				ok, message = state:plant(index, state.selectedCrop, os.clock())
 			else
@@ -232,8 +245,10 @@ bindPlots = function(player, session)
 				objectiveEvent(player, session, action)
 			end
 			if ok then
-				message = action == "Plant" and (cropId .. " planted • Watch it grow!") or ("+1 " .. mutation .. " " .. cropId)
-				if newDiscovery then message = "NEW DISCOVERY!\n+1 " .. mutation .. " " .. cropId end
+				local experiment = Config.Research.Catalog[experimentId]
+				local name = experiment and (experiment.Name .. " • " .. experiment.Trait) or cropId
+				message = action == "Plant" and (name .. " planted • Watch it grow!") or ("+1 " .. mutation .. " " .. name)
+				if newDiscovery then message = "NEW DISCOVERY!\n+1 " .. mutation .. " " .. name end
 			end
 			publish(player, session, message, ok and { kind = action, position = view.soil.Position, mutation = mutation, cropId = cropId, discovery = newDiscovery } or nil)
 		end)

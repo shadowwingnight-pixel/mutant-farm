@@ -24,7 +24,7 @@ local function button(parent, content, position, size, callback)
 	return item
 end
 
-function Panels.create(gui, player, config, remote)
+function Panels.create(gui, player, config, remote, research)
 	local panel = Instance.new("Frame")
 	panel.Name = "SeedsAndDiscoveries"
 	panel.AnchorPoint, panel.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.54)
@@ -55,6 +55,10 @@ function Panels.create(gui, player, config, remote)
 	local landStatus = text(landCard, "", UDim2.fromOffset(12, 10), UDim2.new(1, -24, 0, 130), 17)
 	local expand = button(landCard, "", UDim2.fromOffset(12, 156), UDim2.new(1, -24, 0, 42), function() remote:FireServer("Expand") end)
 	local shopRows, bookRows = {}, {}
+	local experimental = button(panes.Seeds,"Experimental seeds & harvests",UDim2.new(),UDim2.new(1,-8,0,44),function() panel.Visible=false; research.openSeeds() end)
+	experimental.LayoutOrder=0
+	local researchBook = button(panes.Book,"Research / Hybrid discoveries",UDim2.new(),UDim2.new(1,-8,0,44),function() panel.Visible=false; research.openBook() end)
+	researchBook.LayoutOrder=0
 	for index, cropId in ipairs(config.CropOrder) do
 		local crop = config.Crops[cropId]
 		local card = Instance.new("Frame")
@@ -121,7 +125,7 @@ function Panels.create(gui, player, config, remote)
 			local canBuy = unlocked and nearShop and number("Coins") >= crop.SeedPrice
 			local canSelect = unlocked and number("Seeds_" .. cropId) > 0
 			row.buy.Text = not unlocked and "LOCKED" or (not nearShop and "Visit Seed Shop" or (canBuy and ("Buy • " .. crop.SeedPrice .. " Coins") or "Not enough Coins"))
-			row.select.Text = player:GetAttribute("SelectedCrop") == cropId and "Selected to plant" or "Plant this seed"
+			row.select.Text = player:GetAttribute("SelectedCrop") == cropId and (player:GetAttribute("SelectedExperiment") or "") == "" and "Selected to plant" or "Plant this seed"
 			row.buy.Interactable, row.select.Interactable = canBuy, canSelect
 			row.buy.BackgroundColor3 = canBuy and Color3.fromRGB(60, 106, 74) or Color3.fromRGB(66, 69, 64)
 			row.select.BackgroundColor3 = canSelect and Color3.fromRGB(60, 106, 74) or Color3.fromRGB(66, 69, 64)

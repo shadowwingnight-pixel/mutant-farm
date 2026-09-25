@@ -24,7 +24,7 @@ function Effects.burst(payload)
 	if typeof(position) ~= "Vector3" then return end
 	local camera = workspace.CurrentCamera
 	if camera and (camera.CFrame.Position - position).Magnitude > 85 then return end
-	local cosmic = payload.kind == "Ready" and payload.mutation == "Cosmic"
+	local cosmic = (payload.kind == "Ready" or payload.kind == "Research") and payload.mutation == "Cosmic"
 	local color = Effects.color(payload)
 	local count = cosmic and 16 or 7
 	for index = 1, count do

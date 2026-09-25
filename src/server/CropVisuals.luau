@@ -17,6 +17,8 @@ function CropVisuals.render(view, plot, config, world, now)
 		return
 	end
 	local base = view.soil.Position + Vector3.new(0, view.soil.Size.Y / 2, 0)
+	local experiment = config.Research.Catalog[plot.experiment]
+	local trait = experiment and config.Research.Traits[experiment.Trait]
 	local function piece(name, size, position, color, material, shape)
 		local part = world.part(view.crop, name, size, position, color, material)
 		part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
@@ -25,12 +27,15 @@ function CropVisuals.render(view, plot, config, world, now)
 		return part
 	end
 	local visual = cropConfig.Visual
+	if experiment then
+		piece("ResearchMarker", Vector3.new(0.3,1.2,0.3), base + Vector3.new(3,0.6,2.5), Color3.fromRGB(table.unpack(trait.Color)), Enum.Material.Neon)
+	end
 	local leafGreen = Color3.fromRGB(table.unpack(visual.LeafColor))
 	if plot.stage == 1 and now - plot.plantedAt < cropConfig.SeedSeconds then
 		view.visualPhase = "SEED"
 		piece("SeedMound", Vector3.new(1.5, 0.3, 1.2), base + Vector3.new(0, 0.06, 0), Color3.fromRGB(105, 67, 43), Enum.Material.Ground, Enum.PartType.Ball)
 		piece("Seed", Vector3.new(0.25, 0.14, 0.4), base + Vector3.new(0, 0.24, 0), Color3.fromRGB(240, 219, 158), nil, Enum.PartType.Ball)
-		view.label.Text = "SEED PLANTED"
+		view.label.Text = experiment and (experiment.Name .. " • " .. experiment.Trait .. "\nSEED PLANTED") or "SEED PLANTED"
 		return
 	end
 	view.visualPhase = cropConfig.GrowthStages[plot.stage].Label
@@ -38,7 +43,7 @@ function CropVisuals.render(view, plot, config, world, now)
 	for _, candidate in ipairs(config.Mutations) do
 		if candidate.Id == plot.mutation then mutation = candidate; break end
 	end
-	local scale = ready and mutation.Scale or 1
+	local scale = (ready and mutation.Scale or 1) * (trait and trait.Scale or 1)
 	local fruitColor = (mutation.Id == "Normal" or mutation.Id == "Giant") and visual.Color or mutation.Color
 	local color = ready and Color3.fromRGB(table.unpack(fruitColor)) or Color3.fromRGB(140, 187, 76)
 	local height = cropConfig.GrowthStages[plot.stage].Height * scale
@@ -123,6 +128,7 @@ function CropVisuals.render(view, plot, config, world, now)
 		view.crop:AddTag("CosmicCrop")
 	end
 	view.label.Text = ready and (string.upper(mutation.Id) .. " " .. plot.cropId .. "\nREADY • Click / tap") or (plot.cropId .. " • " .. view.visualPhase)
+	if experiment then view.label.Text = experiment.Name .. " • " .. experiment.Trait .. "\n" .. (ready and (mutation.Id .. " • READY") or view.visualPhase) end
 	if ready then view.label.Parent.Size = UDim2.fromOffset(200, 48) end
 	view.label.TextColor3 = ready and color or Color3.fromRGB(255, 242, 205)
 	view.label.Parent.StudsOffset = Vector3.new(0, ready and height + 1.4 or 1.3, 0)

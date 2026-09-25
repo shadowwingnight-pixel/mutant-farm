@@ -71,6 +71,14 @@ function NPCs.dialogue(def, state, environment)
 		table.insert(lines, "Bram's the name. Bring your harvested crops to this counter and sell the whole basket. I like a busy market!")
 		table.insert(lines, "Golden, Giant, Crystal and Cosmic harvests sell for more. Your basket shows the value before you sell.")
 	else
+		if state.researchCount == 0 then
+			table.insert(lines,"Bring two harvested specimens to my workbench. Press R for Research: review both slots and the Coin cost before confirming. Keep interesting crops instead of selling them!")
+		else
+			table.insert(lines,"Your experiments are bearing fruit! Check Book → Research for discoveries, or Seeds → Experimental to plant a result. Rare parents influence traits, never guarantee a mutation.")
+		end
+		for _, crop in ipairs(state.config.CropOrder) do
+			if (state.bag[crop].Cosmic or 0) > 0 then table.insert(lines,"A Cosmic specimen! Its unusual energy favors affinity traits. Even its offspring won't be guaranteed Cosmic."); break end
+		end
 		table.insert(lines, state.objectiveStep == #state.config.Objectives and "You've learned the town's farming loop! Keep exploring your Discovery Book. There's always another unusual harvest to find." or "I'm Dr. Lumen. Every mature crop rolls one mutation. Harvest it to record that crop-and-mutation combination in your Discovery Book.")
 		local missing
 		for _, crop in ipairs(state.config.CropOrder) do

@@ -1,5 +1,19 @@
 -- Numbers and identifiers only: also usable by the standalone Luau tests.
-return {
+local Config = {
+	Research = {
+		Cost = 20, MaxStack = 999, Cooldown = 1.5,
+		TraitOrder = { "Growth", "Size", "Value", "Affinity" },
+		Traits = {
+			Growth = { Grow = 0.8, Scale = 1, Value = 1.1, Affinity = 1, Color = { 123, 232, 159 }, Code = "GR", Description = "20% faster growth; +10% sale value" },
+			Size = { Grow = 1, Scale = 1.25, Value = 1.2, Affinity = 1, Color = { 242, 171, 97 }, Code = "SZ", Description = "25% larger; +20% sale value" },
+			Value = { Grow = 1, Scale = 1, Value = 1.5, Affinity = 1, Color = { 255, 224, 114 }, Code = "VL", Description = "+50% sale value" },
+			Affinity = { Grow = 1, Scale = 1, Value = 1.1, Affinity = 1.5, Color = { 185, 144, 245 }, Code = "AF", Description = "Modest rare-mutation affinity; +10% sale value" },
+		},
+		-- Additive parental tendencies in TraitOrder. All outcomes keep positive weight.
+		ParentWeights = { Normal = {4,1,1,1}, Giant = {1,7,1,1}, Golden = {1,1,7,2}, Crystal = {1,1,4,6}, Cosmic = {1,2,3,10} },
+		Compatibility = { Tomato = { Tomato = true, Strawberry = true }, Strawberry = { Tomato = true, Strawberry = true }, Pumpkin = { Pumpkin = true } },
+		Catalog = {}, Order = {}, Specimens = {}, SpecimenOrder = {}, Combinations = {}, Discoveries = {},
+	},
 	StartingCoins = 100,
 	Objectives = {
 		{ Event = "BuyTomato", Text = "Buy a Tomato Seed", Coins = 5 },
@@ -94,3 +108,27 @@ return {
 		{ Id = "Cosmic", Weight = 10, Multiplier = 20, Color = { 188, 105, 255 }, Scale = 1.35 },
 	},
 }
+
+-- Finite identifiers replace per-item GUIDs/lineage trees: 12 seed stacks, 15 specimen classes.
+for _, crop in ipairs(Config.CropOrder) do
+	for _, trait in ipairs(Config.Research.TraitOrder) do
+		local id = crop .. "_" .. trait
+		Config.Research.Catalog[id] = { Crop = crop, Trait = trait, Name = "EXP-" .. string.sub(crop,1,1) .. "-" .. Config.Research.Traits[trait].Code }
+		table.insert(Config.Research.Order,id)
+	end
+	for _, mutation in ipairs(Config.Mutations) do
+		local id = crop .. "_" .. mutation.Id
+		Config.Research.Specimens[id] = { Crop = crop, Mutation = mutation.Id, Name = mutation.Id .. " " .. crop }
+		table.insert(Config.Research.SpecimenOrder,id)
+	end
+	for other in pairs(Config.Research.Compatibility[crop]) do
+		local key = crop < other and crop .. "_" .. other or other .. "_" .. crop
+		Config.Research.Combinations[key] = true
+	end
+end
+for key in pairs(Config.Research.Combinations) do Config.Research.Discoveries[key] = true end
+for _, trait in ipairs(Config.Research.TraitOrder) do
+	Config.Research.Discoveries["Trait_" .. trait] = true
+	Config.Research.Discoveries["Grown_" .. trait] = true
+end
+return Config

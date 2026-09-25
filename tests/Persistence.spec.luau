@@ -51,7 +51,7 @@ end)
 
 test("legacy fields migrate; malformed and future data fail closed", function()
 	local migrated = Data.decode({ coins = 345, seeds = { Tomato = 2 } }, Config)
-	assert(migrated.version == 2 and migrated.coins == 345 and migrated.expansionTier == 1 and migrated.objectiveStep == 0)
+	assert(migrated.version == 3 and migrated.coins == 345 and migrated.expansionTier == 1 and migrated.objectiveStep == 0)
 	for _, bad in ipairs({ {}, false, "bad", { coins = -1 }, { coins = 1.5 }, { coins = math.huge },
 		{ coins = 0 / 0 }, { coins = 100, version = 99 }, { coins = 100, bag = false },
 		{ coins = 100, seeds = { Unknown = 1 } }, { coins = 100, unlocked = { Tomato = 1 } },

@@ -144,8 +144,10 @@ function World.countdown(view, plot, config, now)
 	local crop = config.Crops[plot.cropId]
 	if not crop or plot.stage == 0 or plot.stage == #crop.GrowthStages then return end
 	if view.visualPhase == "SEED" and now - plot.plantedAt >= crop.SeedSeconds then World.render(view, plot, config) end
-	local seconds = math.max(0, math.ceil(crop.GrowSeconds - (now - plot.plantedAt)))
-	local text = plot.cropId .. " • " .. (view.visualPhase or "GROWING") .. "\n" .. seconds .. "s"
+	local experiment = config.Research.Catalog[plot.experiment]
+	local duration = crop.GrowSeconds * (experiment and config.Research.Traits[experiment.Trait].Grow or 1)
+	local seconds = math.max(0, math.ceil(duration - (now - plot.plantedAt)))
+	local text = (experiment and experiment.Name .. " • " .. experiment.Trait or plot.cropId) .. " • " .. (view.visualPhase or "GROWING") .. "\n" .. seconds .. "s"
 	if view.label.Text ~= text then view.label.Text = text end
 end
 

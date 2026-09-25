@@ -9,9 +9,11 @@ local gui = Instance.new("ScreenGui")
 gui.Name, gui.ResetOnSpawn = "MutantFarmHUD", false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
-local panels = FarmPanels.create(gui, player, Config, ReplicatedStorage:WaitForChild("FarmAction"))
-local dialogue = require(script.Parent.TownDialogue).create(gui, panels.close)
-player.CharacterAdded:Connect(function() dialogue.close() end)
+local panels, dialogue
+local research = require(script.Parent.ResearchPanel).create(gui,player,Config,ReplicatedStorage:WaitForChild("FarmResearch"),function() if panels then panels.close() end; if dialogue then dialogue.close() end end)
+panels = FarmPanels.create(gui, player, Config, ReplicatedStorage:WaitForChild("FarmAction"),research)
+dialogue = require(script.Parent.TownDialogue).create(gui, function() panels.close(); research.close() end)
+player.CharacterAdded:Connect(function() dialogue.close(); research.close() end)
 local cream = Color3.fromRGB(255, 243, 214)
 local dark = Color3.fromRGB(24, 45, 38)
 
@@ -45,7 +47,7 @@ for index, info in ipairs({ { "Seeds", panels.openSeeds }, { "Book", panels.open
 	button.Text, button.Font, button.TextSize = info[1], Enum.Font.GothamBold, 13
 	button.TextColor3, button.BackgroundColor3, button.Parent = cream, Color3.fromRGB(60, 106, 74), panel
 	round(button, 7)
-	button.Activated:Connect(function() dialogue.close(); info[2]() end)
+	button.Activated:Connect(function() dialogue.close(); research.close(); info[2]() end)
 end
 local cards = {}
 for index, info in ipairs({ {"Coins", "Coins", Color3.fromRGB(255, 212, 95)}, {"SeedCount", "Seeds", Color3.fromRGB(167, 232, 136)}, {"HarvestCount", "Harvest", Color3.fromRGB(255, 146, 124)} }) do
@@ -89,14 +91,15 @@ local title = label(reveal, "COSMIC MUTATION!", UDim2.fromOffset(8, 9), UDim2.ne
 local subtitle = label(reveal, "A tiny universe grew in your garden.", UDim2.fromOffset(10, 41), UDim2.new(1, -20, 0, 22), 13)
 local revealScale = Instance.new("UIScale", reveal)
 local revealVersion, revealUntil = 0, 0
-local function cosmicReveal(preview)
+local function cosmicReveal(preview, researchReveal)
 	revealVersion += 1
 	local version = revealVersion
 	revealUntil = os.clock() + 3.6
 	reveal.Visible, revealScale.Scale = true, 0.85
 	title.TextTransparency, subtitle.TextTransparency, border.Transparency = 0, 0, 0
 	reveal.BackgroundTransparency = 0.08
-	subtitle.Text = preview and "STUDIO PREVIEW • Visual only • No rewards" or "A tiny universe grew in your garden."
+	title.Text = researchReveal and "COSMIC RESEARCH!" or "COSMIC MUTATION!"
+	subtitle.Text = researchReveal and "Rare energy. Unpredictable offspring." or (preview and "STUDIO PREVIEW • Visual only • No rewards" or "A tiny universe grew in your garden.")
 	TweenService:Create(revealScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	task.delay(3, function()
 		if revealVersion ~= version then return end
@@ -111,7 +114,7 @@ local toastVersion = 0
 local toastLocked = false
 local importantQueue = {}
 local function showToast(payload)
-	local important = payload.kind == "Objective" or payload.kind == "Expand" or payload.discovery or (payload.unlocks and #payload.unlocks > 0)
+	local important = payload.kind == "Research" or payload.kind == "Objective" or payload.kind == "Expand" or payload.discovery or (payload.unlocks and #payload.unlocks > 0)
 	if toastLocked then
 		if (important or payload.kind == "Buy" or payload.kind == "Sell") and #importantQueue < 8 then table.insert(importantQueue, payload) end
 		return
@@ -130,11 +133,13 @@ local function showToast(payload)
 	end)
 end
 local function message(payload)
+	if payload.kind == "ResearchState" then research.receive(payload); return end
 	if payload.kind == "Dialogue" then dialogue.open(payload); return end
-	if payload.kind == "Shop" then dialogue.close(); panels.openSeeds(); return end
-	if payload.kind == "Upgrades" then dialogue.close(); panels.openLand(); return end
-	if payload.kind == "Select" then panels.close() end
+	if payload.kind == "Shop" then research.close(); dialogue.close(); panels.openSeeds(); return end
+	if payload.kind == "Upgrades" then research.close(); dialogue.close(); panels.openLand(); return end
+	if payload.kind == "Select" then research.close(); panels.close() end
 	Effects.burst(payload)
+	if payload.kind == "Research" and payload.mutation == "Cosmic" and os.clock() >= revealUntil then cosmicReveal(false,true) end
 	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
 		if os.clock() >= revealUntil then cosmicReveal(payload.preview) end
 	end
@@ -185,6 +190,7 @@ local function update()
 		card.value = value
 	end
 	local selected = player:GetAttribute("SelectedCrop") or Config.CropOrder[1]
+	local experimental = Config.Research.Catalog[player:GetAttribute("SelectedExperiment")]
 	local collectionSize = #Config.CropOrder * #Config.Mutations
 	basket.Text = amount("HarvestCount") > 0 and ("Basket: " .. amount("HarvestValue") .. " Coins • Discoveries: " .. amount("DiscoveryCount") .. "/" .. collectionSize) or ("Selected: " .. selected .. " (" .. amount("Seeds_" .. selected) .. ") • Book: " .. amount("DiscoveryCount") .. "/" .. collectionSize)
 	if amount("Ready") > 0 then
@@ -199,6 +205,14 @@ local function update()
 		guide.Text, targetName = "GROWING • Watch for READY, then harvest", ""
 	else
 		guide.Text, targetName = "1  BUY • Green Seed Shop → E / tap", "SeedShop"
+	end
+	if experimental then
+		basket.Text = experimental.Name .. " • " .. experimental.Trait .. " • Seeds: " .. amount("ExpSeed_" .. player:GetAttribute("SelectedExperiment")) .. " • Basket: " .. amount("HarvestValue") .. " Coins"
+		if amount("ExpSeed_" .. player:GetAttribute("SelectedExperiment")) > 0 and amount("Ready") == 0 and amount("Growing") < amount("PlotCount") then
+			guide.Text,targetName="PLANT " .. experimental.Name .. " • Click empty soil","Soil"
+		elseif amount("ExpSeed_" .. player:GetAttribute("SelectedExperiment")) == 0 and amount("Growing") == 0 and amount("HarvestCount") == 0 then
+			guide.Text,targetName="Seeds → choose a normal or experimental seed",""
+		end
 	end
 	local step = player:GetAttribute("ObjectiveStep")
 	local objective = step and Config.Objectives[step + 1]
