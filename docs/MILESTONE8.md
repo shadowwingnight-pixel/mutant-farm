@@ -1,6 +1,10 @@
 # M8 — Mutation Research & Cross-breeding V1
 
-Implemented locally; owner Studio acceptance pending. No push, publication or M9 work.
+Status: **manual Studio acceptance PASSED**, confirmed by the project owner.
+Research, specimen consumption, Coin cost, experimental seeds, planting/harvesting,
+inherited traits, Discovery Book integration, rejection cases, exploit/replay
+protection, Meteor interaction and schema v3 persistence/rejoin work correctly.
+The owner authorized pushing completed M8 commits. No experience publication or M9 work.
 
 ## Loop and controls
 
@@ -186,7 +190,7 @@ passed. Added deterministic tests covering identical-parent consumption, invalid
 pairs/requests, low Coins, capacity, inheritance bounds, farming/sales, affinity
 with weather and schema migration. Standalone Luau tools remain unavailable, so
 these regression suites are written but **not executed**. Rojo does not compile Luau
-or establish Studio runtime correctness. Manual acceptance remains required.
+or establish Studio runtime correctness. Owner manual Studio acceptance has passed.
 
 No recursive hybrid breeding, exact per-seed lineage, reserved specimen storage,
 new normal crop species or new mutation tier. Dialogue samples current conditions
