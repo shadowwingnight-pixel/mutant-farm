@@ -1,7 +1,7 @@
 # Milestone 2 — presentation and feedback
 
-Status: implementation ready for manual Studio testing. **Not yet manually validated.**
-Milestone 1 was validated by the owner; Milestone 3 has not started. Changes are local only.
+Status: **validated by the project owner in Roblox Studio on 2026-09-25.**
+The complete gameplay loop and mutation preview system passed. Milestone 3 has not started.
 
 ## What changed
 
@@ -29,8 +29,9 @@ are accepted by it, and no cosmetic effect changes gameplay state.
 - Verified `FarmState` and `Config` match validated Milestone 1 (`cd86de8`).
 - Standalone Luau compilation and gameplay-state tests were not run: optional
   test-tool download awaits approval. No tool was downloaded or installed.
-- Engine rendering, controls, mobile layout, and reveal timing still need the
-  owner's Studio test below. Build/static checks do not prove runtime behavior.
+- Manual Studio gameplay loop and mutation preview system: **PASS**, confirmed
+  by the project owner on 2026-09-25. Supplemental mobile and multiplayer checks
+  have not been separately confirmed. The steps below remain for regression testing.
 
 Run `./tests/validate.ps1` to repeat available checks. If official Luau tools are
 already available, pass `-LuauDirectory 'PATH_TO_LUAU_TOOLS'` to also compile and

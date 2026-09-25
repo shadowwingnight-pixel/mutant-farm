@@ -3,7 +3,7 @@
 Milestone 1 prototype: buy Tomato Seeds, plant, grow, mutate, harvest and sell.
 **Milestone 1 validated:** the project owner confirmed the required manual
 gameplay loop passed in Roblox Studio on 2026-09-25.
-All progress is session-only (no persistence). Milestone 2 presentation improvements are implemented and awaiting manual Studio validation; see [Milestone 2 testing](docs/MILESTONE2.md). Milestone 3 has not started.
+All progress is session-only (no persistence). **Milestone 2 validated:** the owner confirmed the complete gameplay loop and mutation preview system passed in Roblox Studio; see [Milestone 2 testing](docs/MILESTONE2.md). Milestone 3 has not started.
 
 ## Source layout
 
