@@ -1,10 +1,11 @@
 # Milestone 6 — Mutant Farm Town
 
-Status: **implemented; owner Studio visual/gameplay acceptance pending**.
-Update: the owner confirmed the M6A foundation loads and works after restarting and
-reconnecting Rojo. The additive [M6B polish pass](MILESTONE6B.md) awaits visual validation.
+Status: **M6A + M6B + M6C validated by the owner in Roblox Studio**.
+The town, redesigned buildings, farm and waterfront passed manual acceptance and
+are accepted as the current development-stage visual baseline.
 Validated baseline: `02da144d6bffb39619982b56e832ae1679b83b92`.
-Local commits only; no push, experience publication/update or Milestone 7 work.
+Owner authorized pushing the completed M6 commits. No experience publication/update
+or Milestone 7 work.
 
 ## Layout
 
@@ -154,11 +155,11 @@ EnvironmentService, EnvironmentView, StudioPreview or the existing Luau test sui
   modules and existing regression suites are unchanged.
 - Standalone Luau compilation/regression suites remain **unexecuted**, because the
   runner is unavailable. Rojo builds serialize source; they do not prove syntax,
-  navigation, visuals or runtime behavior. **Studio acceptance is still pending.**
+  navigation, visuals or runtime behavior. **Owner Studio acceptance has passed for M6A–C.**
 
 Known prototype limits: open-front shops and closed lab; static shallow water;
 M5's camera-local rain has no roof occlusion and lightning remains silent. Neither
 the closed-road signs nor the lab expose future mechanics. Edge/large-avatar
 clearances and visual readability need the owner's walkthrough.
 
-Next: await Milestone 6 acceptance. Milestone 7 is not started or scoped here.
+Milestone 6 acceptance passed. Milestone 7 is not started or scoped here.

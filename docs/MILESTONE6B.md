@@ -1,8 +1,8 @@
 # Milestone 6B — town visual expansion and polish
 
-Status: **implemented; Studio visual validation pending**. The owner confirmed that
-M6A (`8522d30`, `cca0ce0`) loads and works after restarting/reconnecting Rojo.
-M6B extends that layout; no town replacement, gameplay changes, push or publication.
+Status: **validated as part of the completed M6A + M6B + M6C Studio acceptance**.
+The owner accepted the redesigned town as the current visual baseline. M6C supersedes
+the initial M6B landmark and waterfront visuals. No experience publication.
 Milestone 7 has not started.
 
 ## Additions
@@ -96,6 +96,6 @@ viewport/mobile emulator and check Output and frame rate, especially during stor
 Known prototype limits: distant scenery is non-colliding visual backdrop, not
 explorable land; new houses have closed solid exteriors. M5's camera-local rain still
 has no roof occlusion and thunder remains silent. Check sightlines, text readability
-and corner clearances in Studio before considering the polish validated.
+and corner clearances when making future visual changes; M6A–C acceptance has passed.
 
-Next: await M6B visual acceptance. Do not begin Milestone 7.
+M6A–C acceptance passed. Do not begin Milestone 7.

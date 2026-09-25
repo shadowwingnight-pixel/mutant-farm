@@ -1,8 +1,10 @@
 # M6C — Environment redesign
 
-Status: implemented locally, awaiting owner Studio visual approval. M6A/B worked
-functionally, but their visual quality was not accepted. Milestone 6 is not validated.
-Nothing pushed or published; no Milestone 7 work.
+Status: **M6A + M6B + M6C validated by the owner in Roblox Studio**.
+The manual acceptance test passed: the town, redesigned buildings, farm and
+waterfront are functional and accepted as the current development-stage visual
+baseline. Owner authorized pushing completed M6 commits. No experience publication
+or Milestone 7 work.
 
 ## Substantial replacements
 
@@ -76,4 +78,4 @@ still need Studio inspection; StaticTownParts is recorded on the town model.
 Water is a static stylized surface over a shallow walkable bed, not swimming
 Terrain water. No functional interiors. Existing rain has no roof occlusion and
 thunder effects are silent. Visual quality, roof/shoreline appearance and traversal
-remain unverified in Studio until the owner tests them.
+were accepted by the owner in the M6 manual Studio test for the current development stage.
