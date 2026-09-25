@@ -1,9 +1,13 @@
 # Mutant Farm
 
-Milestone 1 prototype: buy Tomato Seeds, plant, grow, mutate, harvest and sell.
+Buy seeds, plant, grow, mutate, harvest, sell, unlock crops and collect discoveries.
 **Milestone 1 validated:** the project owner confirmed the required manual
 gameplay loop passed in Roblox Studio on 2026-09-25.
-All progress is session-only (no persistence). **Milestone 2 validated:** the owner confirmed the complete gameplay loop and mutation preview system passed in Roblox Studio; see [Milestone 2 testing](docs/MILESTONE2.md). Milestone 3 has not started.
+All progress is session-only (no persistence). **Milestone 2 validated:** the owner confirmed the complete gameplay loop and mutation preview system passed in Roblox Studio; see [Milestone 2 testing](docs/MILESTONE2.md).
+
+**Milestone 3: implemented, awaiting manual validation.** Tomato → Strawberry → Pumpkin,
+seed selection, automatic unlocks and a 15-entry Discovery Book. See [current balance,
+controls and manual tests](docs/MILESTONE3.md). Milestone 4 has not started.
 
 ## Source layout
 
@@ -68,18 +72,22 @@ Once Rojo is available, validate and build a local place with:
 rojo build default.project.json -o build.rbxlx
 ```
 
-Generated place files are ignored by Git. The repository is local only; no
-GitHub repository or remote is required for Studio sync.
+Generated place files are ignored by Git. GitHub is not required for Studio sync.
+Milestone 3 changes remain local until manual validation and explicit push approval.
 
-## Milestone 1 controls and balance
+## Controls and mutation balance
 
 - Start with 100 Coins and six personal soil plots.
-- Green shop: walk close, then press E or tap the prompt to buy one seed (10 Coins).
-- Empty soil: walk close and click/tap to plant. Each crop takes 15 seconds,
-  with visible stages at 0, 5, 10 and 15 seconds.
+- Green shop: walk close, then press E or tap to browse. Choose a crop and buy seeds.
+  Buying selects that crop for planting; close X to return to the farm.
+- HUD Seeds button: view unlock progress, or choose an owned seed with **Plant this seed**.
+- Empty soil: walk close and click/tap to plant the selected seed. Tomato takes 15 seconds;
+  Strawberry 22 and Pumpkin 32. Prices, stages, visuals and unlocks are in Config.
 - READY soil: click/tap to harvest into your basket.
 - Orange stand: press E or tap the prompt to sell the entire basket.
-- HUD shows Coins, seeds, Tomatoes, mutation counts, basket value and next action.
+- HUD shows Coins, total seeds, total harvested crops, selected crop and next action.
+- Book button: browse discoveries and per-mutation basket counts. Harvesting records a
+  combination once; undiscovered entries remain **???**. Selling never erases discoveries.
 - Each player gets a separate farm; other players cannot transact or harvest there.
 - Respawning retains session inventory and plants; leaving discards them.
 
@@ -96,9 +104,12 @@ state, spends seeds/Coins, rolls mutations and grants rewards. Player attributes
 are replicated display snapshots, never input. Native clicks/prompts validate
 ownership, a living character, distance and a shared action cooldown server-side.
 There are no client-to-server inventory or pricing remotes.
+The seed UI sends only a whitelisted Buy/Select action and crop ID; the server checks
+the player's character, rate limit, shop distance for purchases, unlock and available Coins/seeds.
 
 `FarmState` contains testable state/economy logic; `FarmWorld` generates the farm; `CropVisuals` renders plants;
-`Main` handles player lifecycle and interactions; `FarmEffects` provides bounded local effects; `FarmHUD` displays replicated
+`Main` handles player lifecycle and interactions; `FarmPanels` displays the shop and book;
+`FarmEffects` provides bounded local effects; `FarmHUD` displays replicated
 state and animates Cosmic stars. No external assets or runtime packages are used.
 
 ## Validation and manual acceptance
@@ -122,7 +133,8 @@ This compiles all scripts and runs deterministic state tests, including every
 one of the 10,000 possible mutation rolls, one-time payouts and repeat planting.
 Rojo build success alone does not prove engine runtime behavior.
 
-Required Studio test (with Rojo connected, start a fresh Play session):
+Historical Milestone 1 acceptance steps (passed). Use [Milestone 3 acceptance](docs/MILESTONE3.md)
+for the updated shop, progression and collection:
 
 1. Join: verify your farm, six soil plots and HUD showing 100 Coins / 0 seeds / 0 Tomatoes.
 2. Walk to the green shop; press E once. Expect 90 Coins / 1 seed.
@@ -139,4 +151,5 @@ six plots, harvest/replant, and reset your character. In Studio's two-player tes
 verify separate inventories and that another player's plots/shop/sell stand do
 not accept your interactions. Try Device Emulator for tap targets and HUD sizing.
 
-Rare-mutation previews now use a Studio-only server command with the same reveal effects as gameplay. See [exact preview and recording instructions](docs/MILESTONE2.md#mutation-previews-and-cosmic-recording). Production probabilities remain unchanged.
+Rare-mutation previews use a Studio-only server command with the same reveal effects as gameplay.
+See [current crop preview instructions](docs/MILESTONE3.md#mutation-preview). Production probabilities remain unchanged.

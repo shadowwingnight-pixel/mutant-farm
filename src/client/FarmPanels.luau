@@ -79,8 +79,13 @@ function Panels.create(gui, player, config, remote)
 	local function number(name) return player:GetAttribute(name) or 0 end
 	local function refresh()
 		if not panel.Visible then return end
+		local farms = workspace:FindFirstChild("MutantFarms")
+		local farm = farms and farms:FindFirstChild("Farm_" .. player.UserId)
+		local shop = farm and farm:FindFirstChild("SeedShop")
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local nearShop = shop ~= nil and root ~= nil and (root.Position - shop.Position).Magnitude <= config.ShopDistance
 		title.Text = mode == "Seeds" and "SEEDS & PROGRESSION" or "MUTATION DISCOVERY BOOK"
-		subtitle.Text = mode == "Seeds" and ("Buy near your green shop. Selected: " .. (player:GetAttribute("SelectedCrop") or "Tomato") .. "\nSell crops to unlock seeds; unlocks do not spend Coins.")
+		subtitle.Text = mode == "Seeds" and ("Buy near your green shop. Close X to plant " .. (player:GetAttribute("SelectedCrop") or "Tomato") .. ".\nSell crops to unlock seeds; unlocks do not spend Coins.")
 			or (number("DiscoveryCount") .. "/" .. (#config.CropOrder * #config.Mutations) .. " discovered • Harvest to record a discovery\nSession collection • Unknown mutations stay hidden")
 		for name, pane in pairs(panes) do pane.Visible = name == mode end
 		for _, cropId in ipairs(config.CropOrder) do
@@ -94,9 +99,9 @@ function Panels.create(gui, player, config, remote)
 				row.status.Text = "LOCKED • Both requirements:\nSale Coins: " .. math.min(number("EarnedCoins"), rule.EarnedCoins) .. "/" .. rule.EarnedCoins
 					.. "  |  " .. rule.PreviousCrop .. " harvests: " .. math.min(number("Harvested_" .. rule.PreviousCrop), rule.Harvests) .. "/" .. rule.Harvests .. "\nSell a harvest to unlock."
 			end
-			local canBuy = unlocked and number("Coins") >= crop.SeedPrice
+			local canBuy = unlocked and nearShop and number("Coins") >= crop.SeedPrice
 			local canSelect = unlocked and number("Seeds_" .. cropId) > 0
-			row.buy.Text = not unlocked and "LOCKED" or (canBuy and ("Buy • " .. crop.SeedPrice .. " Coins") or "Not enough Coins")
+			row.buy.Text = not unlocked and "LOCKED" or (not nearShop and "Visit Seed Shop" or (canBuy and ("Buy • " .. crop.SeedPrice .. " Coins") or "Not enough Coins"))
 			row.select.Text = player:GetAttribute("SelectedCrop") == cropId and "Selected to plant" or "Plant this seed"
 			row.buy.Interactable, row.select.Interactable = canBuy, canSelect
 			row.buy.BackgroundColor3 = canBuy and Color3.fromRGB(60, 106, 74) or Color3.fromRGB(66, 69, 64)
@@ -122,6 +127,7 @@ function Panels.create(gui, player, config, remote)
 	function api.openSeeds() mode = "Seeds"; panel.Visible = true; refresh() end
 	function api.openBook() mode = "Book"; panel.Visible = true; refresh() end
 	function api.close() panel.Visible = false end
+	api.refresh = refresh
 	return api
 end
 

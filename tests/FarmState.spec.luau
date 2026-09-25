@@ -137,4 +137,159 @@ test("six simultaneous crops mature and harvest independently", function()
 	assert(state.coins == 148)
 end)
 
+local function batch(state, cropId, now, roll)
+	for index = 1, Config.PlotCount do
+		assert(state:buy(cropId))
+		assert(state:plant(index, cropId, now))
+	end
+	local finish = now + Config.Crops[cropId].GrowSeconds
+	state:advance(finish, function() return roll or 1 end)
+	for index = 1, Config.PlotCount do assert(state:harvest(index)) end
+	assert(state:sell())
+	return finish + 1
+end
+
+test("new session locks higher tiers and starts with an empty discovery book", function()
+	local state = FarmState.new(Config)
+	assert(state.unlocked.Tomato and not state.unlocked.Strawberry and not state.unlocked.Pumpkin)
+	assert(state.earnedCoins == 0 and state.selectedCrop == "Tomato")
+	for _, cropId in ipairs(Config.CropOrder) do
+		assert(state.harvested[cropId] == 0 and next(state.discoveries[cropId]) == nil)
+	end
+	assert(not state:buy("Strawberry"))
+	assert(not state:buy("Pumpkin"))
+	assert(not state:select("Pumpkin"))
+	assert(state.coins == 100)
+end)
+
+test("malformed crop requests cannot change economy or seed selection", function()
+	local state = FarmState.new(Config)
+	for _, value in ipairs({ 99, {}, false, "", "Fake", string.rep("x", 1000) }) do
+		assert(not state:buy(value))
+		assert(not state:select(value))
+	end
+	assert(not state:buy(nil) and not state:select(nil))
+	assert(state.coins == 100 and state.selectedCrop == "Tomato" and state.seeds.Tomato == 0)
+end)
+
+test("unlock requires both actual harvest count and cumulative sale earnings", function()
+	local state = FarmState.new(Config)
+	state.coins = 100000 -- Wallet alone is not progression; test fixture only.
+	assert(#state:refreshUnlocks() == 0)
+	state.earnedCoins = 400
+	state.harvested.Tomato = 23
+	assert(#state:refreshUnlocks() == 0)
+	state.harvested.Tomato = 24
+	state.earnedCoins = 399
+	assert(#state:refreshUnlocks() == 0)
+	state.earnedCoins = 400
+	local unlocked = state:refreshUnlocks()
+	assert(#unlocked == 1 and unlocked[1] == "Strawberry")
+	assert(state.coins == 100000 and #state:refreshUnlocks() == 0)
+	assert(not state.unlocked.Pumpkin)
+end)
+
+test("all-Normal six-plot route unlocks Strawberry then Pumpkin without bankruptcy", function()
+	local state, now = FarmState.new(Config), 0
+	for _ = 1, 3 do now = batch(state, "Tomato", now) end
+	assert(not state.unlocked.Strawberry)
+	now = batch(state, "Tomato", now)
+	assert(state.unlocked.Strawberry and state.harvested.Tomato == 24)
+	assert(state.earnedCoins == 432 and state.coins == 292)
+	for _ = 1, 3 do now = batch(state, "Strawberry", now) end
+	assert(not state.unlocked.Pumpkin)
+	now = batch(state, "Strawberry", now)
+	assert(state.unlocked.Pumpkin and state.harvested.Strawberry == 24)
+	assert(state.earnedCoins == 1512 and state.coins == 772)
+	now = batch(state, "Pumpkin", now)
+	assert(state.coins == 1072 and state.harvested.Pumpkin == 6)
+	assert(state.discoveries.Tomato.Normal and state.discoveries.Strawberry.Normal and state.discoveries.Pumpkin.Normal)
+	assert(now == 189) -- 180 seconds of growth plus nine one-second batch gaps; interactions add real time.
+end)
+
+test("discovery happens on harvest, once per crop-mutation, survives selling", function()
+	local state = planted()
+	state:advance(15, function() return 7001 end)
+	assert(not state.discoveries.Tomato.Golden)
+	local ok, _, discovery = state:harvest(1)
+	assert(ok and discovery and state.discoveries.Tomato.Golden)
+	state:sell()
+	assert(state.discoveries.Tomato.Golden)
+	state:buy("Tomato"); state:plant(1, "Tomato", 20)
+	state:advance(35, function() return 7001 end)
+	local again, _, repeated = state:harvest(1)
+	assert(again and not repeated and state.harvested.Tomato == 2)
+	assert(not state:harvest(1) and state.harvested.Tomato == 2)
+	local other = FarmState.new(Config)
+	assert(not other.discoveries.Tomato.Golden)
+end)
+
+test("selected crop requires owned seeds and buying selects the purchased crop", function()
+	local state = FarmState.new(Config)
+	state.unlocked.Strawberry = true -- Isolated selection fixture.
+	assert(not state:select("Strawberry"))
+	assert(state:buy("Strawberry") and state.selectedCrop == "Strawberry")
+	assert(state:buy("Tomato") and state.selectedCrop == "Tomato")
+	assert(state:select("Strawberry") and state.selectedCrop == "Strawberry")
+	assert(state:plant(1, state.selectedCrop, 0))
+	assert(state.seeds.Strawberry == 0 and state.seeds.Tomato == 1)
+	assert(not state:select("Strawberry") and not state:plant(2, "Strawberry", 0))
+end)
+
+test("every crop honors configured stages and rolls exactly once at maturity", function()
+	for _, cropId in ipairs(Config.CropOrder) do
+		local crop = Config.Crops[cropId]
+		local state, rolls = FarmState.new(Config), 0
+		state.unlocked[cropId] = true
+		assert(state:buy(cropId)); assert(state:plant(1, cropId, 0))
+		local function roll() rolls += 1; return 10000 end
+		for index = 2, #crop.GrowthStages do
+			local at = crop.GrowSeconds * crop.GrowthStages[index].At
+			state:advance(at - 0.001, roll)
+			assert(state.plots[1].stage == index - 1 and rolls == 0)
+			state:advance(at, roll)
+			assert(state.plots[1].stage == index)
+		end
+		state:advance(1000, roll)
+		assert(rolls == 1 and state.plots[1].mutation == "Cosmic")
+	end
+end)
+
+test("all fifteen crop-mutation combinations yield correct mixed-basket rewards", function()
+	local state, expected, now = FarmState.new(Config), 10000, 0
+	state.coins = expected
+	for _, cropId in ipairs(Config.CropOrder) do
+		state.unlocked[cropId] = true
+		local roll = 1
+		for _, mutation in ipairs(Config.Mutations) do
+			assert(state:buy(cropId)); assert(state:plant(1, cropId, now))
+			now += Config.Crops[cropId].GrowSeconds
+			state:advance(now, function() return roll end)
+			assert(state.plots[1].mutation == mutation.Id)
+			local ok, _, discovery = state:harvest(1)
+			assert(ok and discovery and state.discoveries[cropId][mutation.Id])
+			expected += Config.Crops[cropId].BaseValue * mutation.Multiplier - Config.Crops[cropId].SeedPrice
+			roll += mutation.Weight
+		end
+	end
+	assert(state:bagSummary() == 15)
+	assert(state:sell() and state.coins == expected)
+	assert(not state:sell() and state.coins == expected)
+	local found = 0
+	for _, entries in pairs(state.discoveries) do for _ in pairs(entries) do found += 1 end end
+	assert(found == 15)
+end)
+
+test("crop config stays internally consistent and mutation probabilities are unchanged", function()
+	local weights = { Normal = 7000, Golden = 1800, Giant = 1000, Crystal = 190, Cosmic = 10 }
+	for _, mutation in ipairs(Config.Mutations) do assert(mutation.Weight == weights[mutation.Id]) end
+	for _, cropId in ipairs(Config.CropOrder) do
+		local crop = Config.Crops[cropId]
+		assert(crop.BaseValue > crop.SeedPrice and crop.SeedPrice > 0 and crop.GrowSeconds > crop.SeedSeconds)
+		assert(crop.GrowthStages[1].At == 0 and crop.GrowthStages[#crop.GrowthStages].At == 1)
+		for index = 2, #crop.GrowthStages do assert(crop.GrowthStages[index].At > crop.GrowthStages[index - 1].At) end
+		assert(crop.Visual and #crop.Visual.Offsets > 0 and crop.Visual.FruitStage <= #crop.GrowthStages)
+	end
+end)
+
 print("All " .. passed .. " gameplay-state tests passed.")

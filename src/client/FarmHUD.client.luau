@@ -100,24 +100,35 @@ local function cosmicReveal(preview)
 	end)
 end
 local toastVersion = 0
-local function message(payload)
-	if payload.kind == "Shop" then panels.openSeeds(); return end
-	if payload.kind == "Select" then panels.close() end
-	Effects.burst(payload)
-	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
-		-- Several crops can mature together: one brief reveal, never a flashing stack.
-		if os.clock() >= revealUntil then cosmicReveal(payload.preview) end
+local toastLocked = false
+local importantQueue = {}
+local function showToast(payload)
+	local important = payload.discovery or (payload.unlocks and #payload.unlocks > 0)
+	if toastLocked then
+		if important and #importantQueue < 8 then table.insert(importantQueue, payload) end
+		return
 	end
+	toastLocked = important == true
 	toastVersion += 1
 	local version = toastVersion
 	toast.Text, toast.TextColor3 = payload.text or "", Effects.color(payload)
 	toast.Visible, toast.TextTransparency, toast.BackgroundTransparency = true, 0, 0.06
 	toastScale.Scale = 0.94
 	TweenService:Create(toastScale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-	task.delay(3.2, function()
+	task.delay(important and 2.6 or 3.2, function()
 		if toastVersion ~= version then return end
-		toast.Visible = false
+		toast.Visible, toastLocked = false, false
+		if #importantQueue > 0 then showToast(table.remove(importantQueue, 1)) end
 	end)
+end
+local function message(payload)
+	if payload.kind == "Shop" then panels.openSeeds(); return end
+	if payload.kind == "Select" then panels.close() end
+	Effects.burst(payload)
+	if payload.kind == "Ready" and payload.mutation == "Cosmic" then
+		if os.clock() >= revealUntil then cosmicReveal(payload.preview) end
+	end
+	showToast(payload)
 end
 
 local targetHighlight = Instance.new("Highlight")
@@ -151,7 +162,8 @@ local function update()
 		card.value = value
 	end
 	local selected = player:GetAttribute("SelectedCrop") or Config.CropOrder[1]
-	basket.Text = amount("HarvestCount") > 0 and ("Basket: " .. amount("HarvestValue") .. " Coins • Discoveries: " .. amount("DiscoveryCount") .. "/15") or ("Selected: " .. selected .. " (" .. amount("Seeds_" .. selected) .. ") • Book: " .. amount("DiscoveryCount") .. "/15")
+	local collectionSize = #Config.CropOrder * #Config.Mutations
+	basket.Text = amount("HarvestCount") > 0 and ("Basket: " .. amount("HarvestValue") .. " Coins • Discoveries: " .. amount("DiscoveryCount") .. "/" .. collectionSize) or ("Selected: " .. selected .. " (" .. amount("Seeds_" .. selected) .. ") • Book: " .. amount("DiscoveryCount") .. "/" .. collectionSize)
 	if amount("Ready") > 0 then
 		guide.Text, targetName = "3  HARVEST • Click / tap READY soil", "Soil"
 	elseif amount("HarvestCount") > 0 then
@@ -178,4 +190,4 @@ update()
 message({ kind = "Notice", text = "Start at the green Seed Shop • Follow the highlighted stall" })
 Effects.startOrbits()
 -- Retry streamed/late-replicated world targets without per-frame scene searches.
-task.spawn(function() while gui.Parent do task.wait(0.5); refreshTarget() end end)
+task.spawn(function() while gui.Parent do task.wait(0.5); refreshTarget(); panels.refresh() end end)
